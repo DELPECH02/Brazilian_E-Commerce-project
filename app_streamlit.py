@@ -295,22 +295,45 @@ def infer_offensive_formation_from_depth(depth: pd.DataFrame) -> str:
         return "Formation probable : **21 personnel** (2 RB) — estimation"
     return "Formation : estimation (voir titulaires ci-dessous)"
 
+def set_page(name: str):
+    st.session_state["page"] = name
+
+def page_card(title: str, desc: str, cta: str, target_page: str, icon: str = "➡️"):
+    with st.container(border=True):
+        st.markdown(f"### {title}")
+        st.caption(desc)
+        st.button(f"{icon} {cta}", use_container_width=True, on_click=set_page, args=(target_page,))
+
+
 
 # =========================================================
 # SIDEBAR NAV
 # =========================================================
 st.sidebar.title("🏈 NFL Offense Analytics")
 
+PAGES = [
+    "🏠 Accueil",
+    "📄 Données",
+    "🏟️ Fiche équipe",
+    "🎯 Prévision des points",
+    "📈 Impact des variables sur les yards",
+    "🧪 Qualité & diagnostics",
+]
+
+# page par défaut
+if "page" not in st.session_state:
+    st.session_state["page"] = "🏠 Accueil"
+
 page = st.sidebar.radio(
     "Navigation",
-    [
-        "📄 Données",
-        "🏟️ Fiche équipe",
-        "🎯 Prévision des points",
-        "📈 Impact des variables sur les yards",
-        "🧪 Qualité & diagnostics",
-    ],
+    PAGES,
+    index=PAGES.index(st.session_state["page"]),
+    key="nav_radio",
 )
+
+# synchro si l’utilisateur clique dans la radio
+st.session_state["page"] = page
+
 
 st.sidebar.markdown("---")
 data_path = st.sidebar.text_input("Chemin CSV", str(DEFAULT_DATA))
@@ -328,11 +351,85 @@ st.sidebar.caption("Conseil : garde le CSV dans `data/raw/` (repo propre).")
 st.title("NFL Offense Analytics (2005–2024)")
 st.caption("Projet portfolio Data Analyst/ML : exploration, prévision, et explication des drivers.")
 
+# =========================================================
+# PAGE 0 — HOME
+# =========================================================
+if page == "🏠 Accueil":
+    st.subheader("Bienvenue 👋")
+    st.write(
+        "Cette application permet d’explorer les attaques NFL (2005–2024), "
+        "de **prédire les points** à partir des statistiques, et d’expliquer les **drivers** "
+        "derrière la performance (yards, efficacité, turnovers, etc.)."
+    )
+
+    # Image (optionnelle)
+    hero_path = ROOT / "assets" / "home.png"
+    # Image centrée
+    if hero_path.exists():
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c2:
+            st.image(str(hero_path), width=650)
+
+
+    else:
+        st.info("Ajoute une image dans `assets/home.png` pour afficher une bannière ici.")
+
+    st.markdown("### 🚀 Accès rapide")
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        page_card(
+            "📄 Données",
+            "Aperçu du dataset, filtres équipe/saison, valeurs manquantes, heatmap de corrélations.",
+            "Explorer les données",
+            "📄 Données",
+            icon="🔎",
+        )
+
+    with c2:
+        page_card(
+            "🎯 Prévision des points",
+            "Entraîne un RandomForest, métriques RMSE/MAE/R², importances + simulateur what-if.",
+            "Faire une prédiction",
+            "🎯 Prévision des points",
+            icon="🧠",
+        )
+
+    with c3:
+        page_card(
+            "🏟️ Fiche équipe",
+            "Storytelling par équipe : profil, tendances, carte, depth chart ESPN (si web dispo).",
+            "Voir une équipe",
+            "🏟️ Fiche équipe",
+            icon="🏈",
+        )
+
+    st.markdown("### 📌 Les autres modules")
+    c4, c5 = st.columns(2)
+    with c4:
+        page_card(
+            "📈 Drivers des yards",
+            "Analyse des variables qui expliquent le plus les yards : importances + corrélations.",
+            "Analyser les drivers",
+            "📈 Impact des variables sur les yards",
+            icon="📊",
+        )
+    with c5:
+        page_card(
+            "🧪 Qualité & diagnostics",
+            "Checks qualité : duplicats, outliers IQR, export d’un sample nettoyé.",
+            "Voir les diagnostics",
+            "🧪 Qualité & diagnostics",
+            icon="✅",
+        )
+
+    st.markdown("---")
+    st.caption("Astuce : commence par la page 📄 Données pour vérifier la qualité et les colonnes détectées.")
 
 # =========================================================
 # PAGE 1 — DATA
 # =========================================================
-if page == "📄 Données":
+elif page == "📄 Données":
     st.subheader("Aperçu & exploration")
 
     c1, c2, c3, c4 = st.columns(4)
