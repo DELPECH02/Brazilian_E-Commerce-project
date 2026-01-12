@@ -320,19 +320,19 @@ PAGES = [
     "🧪 Qualité & diagnostics",
 ]
 
-# page par défaut
 if "page" not in st.session_state:
-    st.session_state["page"] = "🏠 Accueil"
+    st.session_state.page = "🏠 Accueil"
 
-page = st.sidebar.radio(
+selected = st.sidebar.radio(
     "Navigation",
     PAGES,
-    index=PAGES.index(st.session_state["page"]),
-    key="nav_radio",
+    index=PAGES.index(st.session_state.page),
 )
 
-# synchro si l’utilisateur clique dans la radio
-st.session_state["page"] = page
+# synchro radio → état global
+st.session_state.page = selected
+page = st.session_state.page
+
 
 
 st.sidebar.markdown("---")
