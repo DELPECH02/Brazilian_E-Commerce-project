@@ -318,6 +318,7 @@ PAGES = [
     "🎯 Prévision des points",
     "📈 Impact des variables sur les yards",
     "🧪 Qualité & diagnostics",
+    "⚔️ Simulateur de matchs",
 ]
 
 if "page" not in st.session_state:
@@ -350,6 +351,72 @@ st.sidebar.caption("Conseil : garde le CSV dans `data/raw/` (repo propre).")
 # =========================================================
 st.title("NFL Offense Analytics (2005–2024)")
 st.caption("Projet portfolio Data Analyst/ML : exploration, prévision, et explication des drivers.")
+
+# =========================================================
+# FONCTIONS DE SIMULATION DE MATCH
+# =========================================================
+def simulate_match(team1: str, team2: str, df: pd.DataFrame, model) -> dict:
+    """
+    Simule un match entre deux équipes en utilisant le modèle entraîné.
+    Retourne un dictionnaire avec les prédictions pour chaque équipe.
+    """
+    # Récupérer les dernières statistiques des équipes
+    latest_year = df[year_col].max()
+    
+    # Récupérer les données des équipes pour l'année la plus récente
+    team1_data = df[(df[team_col] == team1) & (df[year_col] == latest_year)].iloc[0]
+    team2_data = df[(df[team_col] == team2) & (df[year_col] == latest_year)].iloc[0]
+    
+    # Récupérer les colonnes numériques utilisées pour l'entraînement
+    # Exclure les colonnes non numériques et la cible
+    exclude_cols = [team_col, year_col, 'Pts']
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    feature_cols = [col for col in numeric_cols if col not in exclude_cols]
+    
+    # Vérifier que nous avons suffisamment de caractéristiques
+    if len(feature_cols) < 37:  # Le modèle attend 37 caractéristiques
+        # Ajouter des caractéristiques manquantes si nécessaire
+        st.warning(f"Nombre insuffisant de caractéristiques ({len(feature_cols)}/37). Vérifiez vos données.")
+        # Utiliser les colonnes disponibles et compléter avec des zéros si nécessaire
+        if len(feature_cols) < 37:
+            feature_cols.extend([f'feature_{i}' for i in range(37 - len(feature_cols))])
+    
+    # Préparer les données pour la prédiction
+    try:
+        # Pour chaque équipe, créer un tableau de caractéristiques dans le bon ordre
+        team1_features = np.array([[team1_data.get(col, 0) for col in feature_cols[:37]]])
+        team2_features = np.array([[team2_data.get(col, 0) for col in feature_cols[:37]]])
+        
+        # Faire la prédiction pour chaque équipe
+        team1_pred = model.predict(team1_features)[0]
+        team2_pred = model.predict(team2_features)[0]
+        
+        # Ajuster légèrement pour éviter les matchs nuls
+        if abs(team1_pred - team2_pred) < 0.5:
+            if team1_pred > team2_pred:
+                team1_pred += 0.5
+            else:
+                team2_pred += 0.5
+        
+        return {
+            'team1': team1,
+            'team2': team2,
+            'team1_score': round(team1_pred, 1),
+            'team2_score': round(team2_pred, 1),
+            'winner': team1 if team1_pred > team2_pred else team2,
+            'point_diff': round(abs(team1_pred - team2_pred), 1)
+        }
+    except Exception as e:
+        st.error(f"Erreur lors de la prédiction: {str(e)}")
+        # Retourner des valeurs par défaut en cas d'erreur
+        return {
+            'team1': team1,
+            'team2': team2,
+            'team1_score': 0,
+            'team2_score': 0,
+            'winner': "Erreur",
+            'point_diff': 0
+        }
 
 # =========================================================
 # PAGE 0 — HOME
@@ -396,6 +463,18 @@ if page == "🏠 Accueil":
         )
 
     with c3:
+        page_card(
+            "⚔️ Simulateur de matchs",
+            "Simulez un match entre deux équipes et prédisez le score final basé sur leurs statistiques offensives.",
+            "Lancer une simulation",
+            "⚔️ Simulateur de matchs",
+            icon="⚔️",
+        )
+
+    st.markdown("### Autres fonctionnalités")
+    c4, c5, c6 = st.columns(3)
+
+    with c4:
         page_card(
             "🏟️ Fiche équipe",
             "Storytelling par équipe : profil, tendances, carte, depth chart ESPN (si web dispo).",
@@ -828,6 +907,108 @@ elif page == "📈 Impact des variables sur les yards":
         }
         (REPORTS_DIR / "yards_drivers.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
         st.caption("Sauvegardé : `reports/yards_drivers.json`")
+
+
+# =========================================================
+# PAGE 6 — SIMULATEUR DE MATCHS
+# =========================================================
+elif page == "⚔️ Simulateur de matchs":
+    st.title("⚔️ Simulateur de matchs NFL")
+    st.markdown("Simulez un match entre deux équipes de la NFL et obtenez une prédiction du score final basée sur leurs statistiques offensives.")
+
+    # Charger le modèle entraîné
+    model_path = MODELS_DIR / "random_forest_pts_last3y.joblib"
+    if model_path.exists():
+        model = load_model(model_path)
+    else:
+        st.error("Le modèle de prédiction n'a pas été trouvé. Veuillez d'abord entraîner un modèle dans l'onglet ' Prévision des points'.")
+        st.stop()
+
+    # Sélection des équipes
+    teams = sorted(df[team_col].unique())
+    latest_year = df[year_col].max()
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        team1 = st.selectbox("Équipe à domicile", teams, index=0)
+
+    with col2:
+        # Exclure l'équipe 1 de la sélection de l'équipe 2
+        team2_options = [t for t in teams if t != team1]
+        team2 = st.selectbox("Équipe à l'extérieur", team2_options, index=0)
+
+    # Bouton pour lancer la simulation
+    if st.button(" Lancer la simulation", use_container_width=True):
+        with st.spinner(f"Simulation du match {team1} vs {team2}..."):
+            # Récupérer les couleurs des équipes (si disponibles)
+            team_colors = {}
+            try:
+                team_locations = fetch_team_locations()
+                team_colors = dict(zip(team_locations['team'], team_locations['colors']))
+            except:
+                pass
+
+            # Effectuer la simulation
+            result = simulate_match(team1, team2, df, model)
+
+            # Afficher le résultat
+            st.markdown("---")
+            st.markdown("## Résultat de la simulation")
+
+            # Créer une mise en page pour le score
+            col1, col2, col3 = st.columns([2, 1, 2])
+
+            with col1:
+                st.markdown(f"### {result['team1']}")
+                st.markdown(f"# {result['team1_score']}")
+
+            with col2:
+                st.markdown("# vs")
+
+            with col3:
+                st.markdown(f"### {result['team2']}")
+                st.markdown(f"# {result['team2_score']}")
+
+            # Afficher le gagnant
+            st.markdown("---")
+            if result['team1_score'] > result['team2_score']:
+                st.success(f" {result['team1']} remporte le match avec {result['point_diff']} points d'avance !")
+            else:
+                st.success(f" {result['team2']} remporte le match avec {result['point_diff']} points d'avance !")
+
+            # Afficher des statistiques supplémentaires
+            st.markdown("### Statistiques du match")
+            team1_stats = df[(df[team_col] == team1) & (df[year_col] == latest_year)].iloc[0]
+            team2_stats = df[(df[team_col] == team2) & (df[year_col] == latest_year)].iloc[0]
+
+            # Créer un tableau comparatif
+            comparison_data = {
+                'Statistique': ['Yards par match', 'Yards par jeu', '1er downs', 'TD%', 'Turnovers', 'Yards par passe', 'Yards à la course'],
+                team1: [
+                    f"{team1_stats.get('Y/G', 'N/A')}",
+                    f"{team1_stats.get('Y/P', 'N/A')}",
+                    f"{team1_stats.get('1st', 'N/A')} (moy. par match)",
+                    f"{team1_stats.get('TD%', 'N/A')}%",
+                    f"{team1_stats.get('TOV', 'N/A')}",
+                    f"{team1_stats.get('Y/A', 'N/A')}",
+                    f"{team1_stats.get('Y/A', 'N/A') if 'Y/A' in team1_stats and 'Y/A' in team2_stats else 'N/A'}",
+                ],
+                team2: [
+                    f"{team2_stats.get('Y/G', 'N/A')}",
+                    f"{team2_stats.get('Y/P', 'N/A')}",
+                    f"{team2_stats.get('1st', 'N/A')} (moy. par match)",
+                    f"{team2_stats.get('TD%', 'N/A')}%",
+                    f"{team2_stats.get('TOV', 'N/A')}",
+                    f"{team2_stats.get('Y/A', 'N/A')}",
+                    f"{team2_stats.get('Y/A', 'N/A') if 'Y/A' in team1_stats and 'Y/A' in team2_stats else 'N/A'}",
+                ]
+            }
+
+            st.table(pd.DataFrame(comparison_data))
+
+            # Note explicative
+            st.info(" Cette simulation est basée sur les statistiques offensives des équipes et un modèle de prédiction entraîné sur les données historiques de la NFL.")
 
 
 # =========================================================
