@@ -50,6 +50,29 @@ def load_data(path: str) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
+def call_api_prediction(features_dict: dict) -> Optional[float]:
+    url = "http://127.0.0.1:8000/predict"
+    try:
+        # Nettoyage : conversion en float et remplacement des NaN par 0.0
+        clean_features = {}
+        for k, v in features_dict.items():
+            if pd.isna(v):
+                clean_features[k] = 0.0
+            else:
+                clean_features[k] = float(v) if hasattr(v, "item") else v
+                
+        response = requests.post(url, json={"features": clean_features}, timeout=5)
+        
+        if response.status_code == 200:
+            return response.json()["prediction"]
+        else:
+            # Afficher l'erreur exacte du serveur pour le debug
+            st.error(f"Erreur Backend ({response.status_code}) : {response.text}")
+    except Exception as e:
+        st.error(f"Erreur de connexion : {e}")
+    return None
+
+
 def rmse(y_true, y_pred) -> float:
     return float(np.sqrt(mean_squared_error(y_true, y_pred)))
 
@@ -107,7 +130,7 @@ def plot_scatter(y_true: pd.Series, y_pred: np.ndarray, title: str):
 
 
 def plot_top_bar(series: pd.Series, title: str, top_n: int = 20):
-    s = series.sort_values(ascending=False).head(top_n)[::-1]  # horizontal sorted
+    s = series.sort_values(ascending=False).head(top_n)[::-1]
     fig, ax = plt.subplots()
     ax.barh(s.index.astype(str), s.values)
     ax.set_title(title)
@@ -199,44 +222,52 @@ def load_model(path: Path):
 # WEB ENRICHMENT: ESPN DEPTH CHART + TEAM MAP
 # =========================================================
 # ESPN depth chart URLs: https://www.espn.com/nfl/team/depth/_/name/<slug>
+# 1. Mapping complet et exact pour ESPN
+# 1. Mapping exhaustif et exact pour les URLs ESPN
 ESPN_TEAM_SLUG = {
-    "ARI": "ari", "ATL": "atl", "BAL": "bal", "BUF": "buf", "CAR": "car", "CHI": "chi",
-    "CIN": "cin", "CLE": "cle", "DAL": "dal", "DEN": "den", "DET": "det", "GB": "gb",
-    "HOU": "hou", "IND": "ind", "JAX": "jax", "KC": "kc", "LV": "lv", "LAC": "lac",
-    "LAR": "lar", "MIA": "mia", "MIN": "min", "NE": "ne", "NO": "no", "NYG": "nyg",
-    "NYJ": "nyj", "PHI": "phi", "PIT": "pit", "SEA": "sea", "SF": "sf", "TB": "tb",
-    "TEN": "ten", "WAS": "wsh", "WSH": "wsh",
+    "ARI": "ari", "ATL": "atl", "BAL": "bal", "BUF": "buf", "CAR": "car", 
+    "CHI": "chi", "CIN": "cin", "CLE": "cle", "DAL": "dal", "DEN": "den", 
+    "DET": "det", "GB": "gb", "HOU": "hou", "IND": "ind", "JAX": "jax", 
+    "KC": "kc", "LV": "lv", "LAC": "lac", "LAR": "lar", "MIA": "mia", 
+    "MIN": "min", "NE": "ne", "NO": "no", "NYG": "nyg", "NYJ": "nyj", 
+    "PHI": "phi", "PIT": "pit", "SF": "sf", "SEA": "sea", "TB": "tb", 
+    "TEN": "ten", "WAS": "wsh"  # Note: Washington est souvent 'wsh' sur ESPN
 }
 
 @st.cache_data(show_spinner=False)
 def fetch_team_locations() -> pd.DataFrame:
-    """
-    Dataset public (community): coordonnées de stades NFL.
-    Si pas d'internet -> DF vide.
-    """
+    """Récupère les coordonnées avec un secours local complet (32 équipes)."""
     url = "https://raw.githubusercontent.com/Sinbad311/CloudProject/master/NFL%20Stadium%20Latitude%20and%20Longtitude.csv"
     try:
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
-        from io import StringIO
-        loc = pd.read_csv(StringIO(r.text))
-        loc.columns = [c.strip().lower() for c in loc.columns]
-
-        # rename to common
-        if "latitude" in loc.columns:
-            loc = loc.rename(columns={"latitude": "lat"})
-        if "longitude" in loc.columns:
-            loc = loc.rename(columns={"longitude": "lon"})
-
-        # make sure expected cols exist
-        for c in ["team", "lat", "lon"]:
-            if c not in loc.columns:
-                return pd.DataFrame(columns=["team", "lat", "lon"])
-
-        loc["team_norm"] = loc["team"].astype(str).str.upper().str.strip()
-        return loc[["team", "lat", "lon", "team_norm"]]
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            from io import StringIO
+            loc = pd.read_csv(StringIO(r.text))
+            loc = loc.rename(columns={"latitude": "lat", "longitude": "lon"})
+            loc["team_norm"] = loc["team"].astype(str).str.upper().str.strip()
+            return loc
     except Exception:
-        return pd.DataFrame(columns=["team", "lat", "lon", "team_norm"])
+        pass 
+    
+    # Secours manuel complet : Les 32 stades NFL
+    data = {
+        "team": [
+            "Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills", "Carolina Panthers",
+            "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns", "Dallas Cowboys", "Denver Broncos",
+            "Detroit Lions", "Green Bay Packers", "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars",
+            "Kansas City Chiefs", "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+            "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants", "New York Jets",
+            "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers", "Seattle Seahawks", 
+            "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"
+        ],
+        "lat": [33.527, 33.755, 39.278, 42.774, 35.225, 41.862, 39.095, 41.506, 32.747, 39.743, 42.340, 44.501, 29.684, 39.760, 30.323, 39.048, 36.090, 33.953, 33.953, 25.958, 44.973, 42.091, 29.951, 40.812, 40.812, 39.901, 40.446, 37.403, 47.595, 27.975, 36.166, 38.907],
+        "lon": [-112.262, -84.401, -76.622, -78.787, -80.852, -87.616, -84.516, -81.699, -97.094, -105.020, -83.045, -88.062, -95.408, -86.163, -81.637, -94.483, -115.183, -118.339, -118.339, -80.238, -93.257, -71.264, -90.081, -74.074, -74.074, -75.167, -80.015, -121.970, -122.331, -82.503, -86.771, -76.864],
+        "abbr": ["ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC", "LV", "LAC", "LAR", "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SF", "SEA", "TB", "TEN", "WAS"]
+    }
+    df_loc = pd.DataFrame(data)
+    # On normalise les noms complets pour la recherche
+    df_loc["team_norm"] = df_loc["team"].str.upper().str.strip()
+    return df_loc
 
 
 def normalize_team_key(team_value: str) -> str:
@@ -260,16 +291,26 @@ def normalize_team_key(team_value: str) -> str:
 
 @st.cache_data(show_spinner=False)
 def fetch_espn_depth_chart(team_abbr: str) -> pd.DataFrame:
+    """Récupère la composition sur ESPN avec un User-Agent pour éviter le blocage."""
     slug = ESPN_TEAM_SLUG.get(team_abbr.upper())
     if not slug:
         return pd.DataFrame()
+        
     url = f"https://www.espn.com/nfl/team/depth/_/name/{slug}"
     try:
-        tables = pd.read_html(url)
-        # Often first table = offense, but ESPN may change
-        return tables[0] if tables else pd.DataFrame()
-    except Exception:
-        return pd.DataFrame()
+        # AJOUT INDISPENSABLE : Un Header pour simuler un navigateur (Chrome/Edge)
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            # On lit le HTML contenu dans la réponse
+            tables = pd.read_html(response.text)
+            return tables[0] if tables else pd.DataFrame()
+    except Exception as e:
+        # Affiche l'erreur en cas de problème réseau
+        st.warning(f"Erreur lors de la récupération ESPN : {e}")
+        
+    return pd.DataFrame()
 
 
 def infer_offensive_formation_from_depth(depth: pd.DataFrame) -> str:
@@ -355,68 +396,41 @@ st.caption("Projet portfolio Data Analyst/ML : exploration, prévision, et expli
 # =========================================================
 # FONCTIONS DE SIMULATION DE MATCH
 # =========================================================
-def simulate_match(team1: str, team2: str, df: pd.DataFrame, model) -> dict:
-    """
-    Simule un match entre deux équipes en utilisant le modèle entraîné.
-    Retourne un dictionnaire avec les prédictions pour chaque équipe.
-    """
-    # Récupérer les dernières statistiques des équipes
+def simulate_match(team1: str, team2: str, df: pd.DataFrame) -> dict:
     latest_year = df[year_col].max()
     
-    # Récupérer les données des équipes pour l'année la plus récente
-    team1_data = df[(df[team_col] == team1) & (df[year_col] == latest_year)].iloc[0]
-    team2_data = df[(df[team_col] == team2) & (df[year_col] == latest_year)].iloc[0]
+    # 1. Récupérer les stats les plus récentes
+    t1_row = df[(df[team_col] == team1) & (df[year_col] == latest_year)].iloc[0]
+    t2_row = df[(df[team_col] == team2) & (df[year_col] == latest_year)].iloc[0]
     
-    # Récupérer les colonnes numériques utilisées pour l'entraînement
-    # Exclure les colonnes non numériques et la cible
-    exclude_cols = [team_col, year_col, 'Pts']
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    feature_cols = [col for col in numeric_cols if col not in exclude_cols]
+    # 2. Filtrage ROBUSTE des colonnes
+    bad_keywords = ["pts", "points", "score", "year", "season", "rank", "id", "name", "team"]
     
-    # Vérifier que nous avons suffisamment de caractéristiques
-    if len(feature_cols) < 37:  # Le modèle attend 37 caractéristiques
-        # Ajouter des caractéristiques manquantes si nécessaire
-        st.warning(f"Nombre insuffisant de caractéristiques ({len(feature_cols)}/37). Vérifiez vos données.")
-        # Utiliser les colonnes disponibles et compléter avec des zéros si nécessaire
-        if len(feature_cols) < 37:
-            feature_cols.extend([f'feature_{i}' for i in range(37 - len(feature_cols))])
+    feature_cols = [
+        c for c in df.select_dtypes(include=[np.number]).columns 
+        if c not in ["Pts", "Points", "score", "year", "Season", team_col, year_col]
+        and not c.lower().startswith(('rank', 'id'))
+    ]
     
-    # Préparer les données pour la prédiction
-    try:
-        # Pour chaque équipe, créer un tableau de caractéristiques dans le bon ordre
-        team1_features = np.array([[team1_data.get(col, 0) for col in feature_cols[:37]]])
-        team2_features = np.array([[team2_data.get(col, 0) for col in feature_cols[:37]]])
-        
-        # Faire la prédiction pour chaque équipe
-        team1_pred = model.predict(team1_features)[0]
-        team2_pred = model.predict(team2_features)[0]
-        
-        # Ajuster légèrement pour éviter les matchs nuls
-        if abs(team1_pred - team2_pred) < 0.5:
-            if team1_pred > team2_pred:
-                team1_pred += 0.5
-            else:
-                team2_pred += 0.5
-        
+    t1_data = {col: t1_row[col] for col in feature_cols}
+    t2_data = {col: t2_row[col] for col in feature_cols}
+    
+    # 3. Appels API
+    score1 = call_api_prediction(t1_data)
+    score2 = call_api_prediction(t2_data)
+    
+    # 4. Renvoi des résultats
+    if score1 is not None and score2 is not None:
         return {
-            'team1': team1,
+            'team1': team1, 
             'team2': team2,
-            'team1_score': round(team1_pred, 1),
-            'team2_score': round(team2_pred, 1),
-            'winner': team1 if team1_pred > team2_pred else team2,
-            'point_diff': round(abs(team1_pred - team2_pred), 1)
+            'team1_score': round(score1, 1), 
+            'team2_score': round(score2, 1),
+            'winner': team1 if score1 > score2 else team2,
+            'point_diff': round(abs(score1 - score2), 1)
         }
-    except Exception as e:
-        st.error(f"Erreur lors de la prédiction: {str(e)}")
-        # Retourner des valeurs par défaut en cas d'erreur
-        return {
-            'team1': team1,
-            'team2': team2,
-            'team1_score': 0,
-            'team2_score': 0,
-            'winner': "Erreur",
-            'point_diff': 0
-        }
+    return {}
+
 
 # =========================================================
 # PAGE 0 — HOME
@@ -677,25 +691,17 @@ elif page == "🏟️ Fiche équipe":
     # try to match coordinates
     map_row = pd.DataFrame()
     if not loc.empty:
-        # exact
-        map_row = loc[loc["team_norm"] == team_key]
-        # fallback contains
-        if map_row.empty:
-            map_row = loc[loc["team_norm"].str.contains(team_key, na=False)]
+        # On normalise la sélection actuelle
+        sel_norm = team_sel.upper().strip()
+        # On cherche soit par le nom complet normalisé, soit par l'abréviation
+        map_row = loc[(loc["team_norm"] == sel_norm) | (loc.get("abbr") == team_key)]
 
-    if map_row is not None and not map_row.empty:
-        map_df = pd.DataFrame({
-            "lat": [float(map_row.iloc[0]["lat"])],
-            "lon": [float(map_row.iloc[0]["lon"])],
-            "team": [team_sel],
-        })
-        st.map(map_df, latitude="lat", longitude="lon", size=80)
+    if not map_row.empty:
+        st.map(map_row)
     else:
         st.warning("Coordonnées indisponibles (internet bloqué ou nom d’équipe non reconnu).")
 
-    st.markdown("### 👥 Titulaires / formation (via ESPN depth chart)")
-    st.caption("Si l’accès web est bloqué, cette section peut rester vide.")
-
+        
     # Let user choose an ESPN abbreviation
     default_abbr = team_key if team_key in ESPN_TEAM_SLUG else ""
     abbr = st.text_input("Abréviation ESPN (ex: DAL, NE, KC…)", value=default_abbr)
@@ -914,101 +920,30 @@ elif page == "📈 Impact des variables sur les yards":
 # =========================================================
 elif page == "⚔️ Simulateur de matchs":
     st.title("⚔️ Simulateur de matchs NFL")
-    st.markdown("Simulez un match entre deux équipes de la NFL et obtenez une prédiction du score final basée sur leurs statistiques offensives.")
+    
+    # Check de connexion pour le jury
+    try:
+        requests.get(url = "http://127.0.0.1:8000/", timeout=1)
+        st.success("Connexion Backend FastAPI : OK ✅")
+    except:
+        st.error("Backend FastAPI HORS-LIGNE ❌ (Lancez 'uvicorn api:app' dans un terminal)")
 
-    # Charger le modèle entraîné
-    model_path = MODELS_DIR / "random_forest_pts_last3y.joblib"
-    if model_path.exists():
-        model = load_model(model_path)
-    else:
-        st.error("Le modèle de prédiction n'a pas été trouvé. Veuillez d'abord entraîner un modèle dans l'onglet ' Prévision des points'.")
-        st.stop()
-
-    # Sélection des équipes
     teams = sorted(df[team_col].unique())
-    latest_year = df[year_col].max()
-
     col1, col2 = st.columns(2)
+    team1 = col1.selectbox("Équipe à domicile", teams, index=0)
+    team2 = col2.selectbox("Équipe à l'extérieur", [t for t in teams if t != team1], index=1)
 
-    with col1:
-        team1 = st.selectbox("Équipe à domicile", teams, index=0)
-
-    with col2:
-        # Exclure l'équipe 1 de la sélection de l'équipe 2
-        team2_options = [t for t in teams if t != team1]
-        team2 = st.selectbox("Équipe à l'extérieur", team2_options, index=0)
-
-    # Bouton pour lancer la simulation
-    if st.button(" Lancer la simulation", use_container_width=True):
-        with st.spinner(f"Simulation du match {team1} vs {team2}..."):
-            # Récupérer les couleurs des équipes (si disponibles)
-            team_colors = {}
-            try:
-                team_locations = fetch_team_locations()
-                team_colors = dict(zip(team_locations['team'], team_locations['colors']))
-            except:
-                pass
-
-            # Effectuer la simulation
-            result = simulate_match(team1, team2, df, model)
-
-            # Afficher le résultat
-            st.markdown("---")
-            st.markdown("## Résultat de la simulation")
-
-            # Créer une mise en page pour le score
-            col1, col2, col3 = st.columns([2, 1, 2])
-
-            with col1:
-                st.markdown(f"### {result['team1']}")
-                st.markdown(f"# {result['team1_score']}")
-
-            with col2:
-                st.markdown("# vs")
-
-            with col3:
-                st.markdown(f"### {result['team2']}")
-                st.markdown(f"# {result['team2_score']}")
-
-            # Afficher le gagnant
-            st.markdown("---")
-            if result['team1_score'] > result['team2_score']:
-                st.success(f" {result['team1']} remporte le match avec {result['point_diff']} points d'avance !")
-            else:
-                st.success(f" {result['team2']} remporte le match avec {result['point_diff']} points d'avance !")
-
-            # Afficher des statistiques supplémentaires
-            st.markdown("### Statistiques du match")
-            team1_stats = df[(df[team_col] == team1) & (df[year_col] == latest_year)].iloc[0]
-            team2_stats = df[(df[team_col] == team2) & (df[year_col] == latest_year)].iloc[0]
-
-            # Créer un tableau comparatif
-            comparison_data = {
-                'Statistique': ['Yards par match', 'Yards par jeu', '1er downs', 'TD%', 'Turnovers', 'Yards par passe', 'Yards à la course'],
-                team1: [
-                    f"{team1_stats.get('Y/G', 'N/A')}",
-                    f"{team1_stats.get('Y/P', 'N/A')}",
-                    f"{team1_stats.get('1st', 'N/A')} (moy. par match)",
-                    f"{team1_stats.get('TD%', 'N/A')}%",
-                    f"{team1_stats.get('TOV', 'N/A')}",
-                    f"{team1_stats.get('Y/A', 'N/A')}",
-                    f"{team1_stats.get('Y/A', 'N/A') if 'Y/A' in team1_stats and 'Y/A' in team2_stats else 'N/A'}",
-                ],
-                team2: [
-                    f"{team2_stats.get('Y/G', 'N/A')}",
-                    f"{team2_stats.get('Y/P', 'N/A')}",
-                    f"{team2_stats.get('1st', 'N/A')} (moy. par match)",
-                    f"{team2_stats.get('TD%', 'N/A')}%",
-                    f"{team2_stats.get('TOV', 'N/A')}",
-                    f"{team2_stats.get('Y/A', 'N/A')}",
-                    f"{team2_stats.get('Y/A', 'N/A') if 'Y/A' in team1_stats and 'Y/A' in team2_stats else 'N/A'}",
-                ]
-            }
-
-            st.table(pd.DataFrame(comparison_data))
-
-            # Note explicative
-            st.info(" Cette simulation est basée sur les statistiques offensives des équipes et un modèle de prédiction entraîné sur les données historiques de la NFL.")
+    if st.button("Lancer la simulation", use_container_width=True):
+        with st.spinner("Calcul des probabilités via l'API..."):
+            result = simulate_match(team1, team2, df)
+            if result:
+                st.markdown("---")
+                c1, c2, c3 = st.columns([2, 1, 2])
+                c1.metric(result['team1'], f"{result['team1_score']} pts")
+                c2.markdown("<h2 style='text-align: center;'>VS</h2>", unsafe_allow_html=True)
+                c3.metric(result['team2'], f"{result['team2_score']} pts")
+                st.balloons()
+                st.success(f"Victoire de **{result['winner']}** (+{result['point_diff']} pts)")
 
 
 # =========================================================

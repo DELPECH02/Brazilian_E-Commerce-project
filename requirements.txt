@@ -7,3 +7,5 @@ streamlit>=1.32
 pytest>=7.4
 requests
 lxml
+fastapi
+uvicorn
