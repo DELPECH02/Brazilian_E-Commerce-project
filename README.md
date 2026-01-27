@@ -15,17 +15,15 @@ L'objectif est de montrer un workflow réaliste de Data Analyst : **nettoyage**,
 
 ## 2) Contenu du repo
 
-```
+```api.py              # Backend : Serveur FastAPI (Moteur de prédiction)
+app_streamlit.py    # Frontend : Interface utilisateur interactive
 data/
-  raw/          # CSV original scrapé
-  processed/    # dataset nettoyé + features
-models/         # modèles entraînés + métriques
-reports/
-  figures/      # graphiques EDA
-src/            # pipeline Python (data, features, eda, train)
-tests/          # tests unitaires (pytest)
-app_streamlit.py
-requirements.txt
+  raw/              # Dataset NFL original (nfl_offense.csv)
+  processed/        # (Optionnel) Datasets nettoyés
+models/             # Modèles entraînés (.joblib)
+reports/            # Graphiques et exports d'analyse
+requirements.txt    # Dépendances (FastAPI, Streamlit, Scikit-Learn...)
+tests/              # Tests unitaires (Pytest)
 ```
 
 ---
@@ -35,7 +33,6 @@ requirements.txt
 ```bash
 python -m venv .venv
 # Windows: .venv\Scripts\activate
-source .venv/bin/activate
 
 pip install -r requirements.txt
 ```
@@ -75,10 +72,18 @@ Le modèle et les métriques sont sauvegardés dans `models/`.
 
 ---
 
-## 6) Lancer la mini-app Streamlit (portfolio)
+## 6) Lancer la mini-app Streamlit 
 
+Ce projet nécessite deux terminaux ouverts simultanément :
+
+Terminal 1 - L'API (Le Cerveau) :
 ```bash
-streamlit run app_streamlit.py
+python -m uvicorn api:app --reload
+```
+
+Terminal 2 - L'Interface (Le Visuel) :
+```bash
+python -m streamlit run app_streamlit.py
 ```
 
 Fonctions :
