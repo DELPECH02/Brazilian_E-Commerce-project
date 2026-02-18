@@ -9,7 +9,8 @@ from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import streamlit as st
-import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.graph_objects as go
 
 import requests
 
@@ -28,9 +29,10 @@ except Exception:
 # CONFIG
 # =========================================================
 st.set_page_config(
-    page_title="NFL Offense Analytics — Prédiction & Insights",
+    page_title="NFL Offense Analytics",
     page_icon="🏈",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 ROOT = Path(__file__).resolve().parent
@@ -40,6 +42,149 @@ REPORTS_DIR = ROOT / "reports"
 
 MODELS_DIR.mkdir(exist_ok=True, parents=True)
 REPORTS_DIR.mkdir(exist_ok=True, parents=True)
+
+# =========================================================
+# CUSTOM CSS — Dark Pro Theme
+# =========================================================
+st.markdown("""
+<style>
+/* ---------- Global ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0a1628 0%, #111d33 100%);
+    border-right: 1px solid #1e3a5f;
+}
+section[data-testid="stSidebar"] .stRadio label {
+    color: #c8d6e5 !important;
+    font-weight: 500;
+}
+
+/* Metric cards */
+[data-testid="stMetric"] {
+    background: linear-gradient(135deg, #0d1b2a 0%, #1b2838 100%);
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+[data-testid="stMetric"] label {
+    color: #8ab4f8 !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    color: #e8eaed !important;
+    font-weight: 700;
+}
+
+/* Buttons */
+.stButton > button {
+    background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    transition: all 0.2s ease;
+}
+.stButton > button:hover {
+    background: linear-gradient(135deg, #1557b0 0%, #1a73e8 100%);
+    box-shadow: 0 4px 12px rgba(26,115,232,0.4);
+    transform: translateY(-1px);
+}
+
+/* Expander */
+.streamlit-expanderHeader {
+    background: #0d1b2a !important;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+/* Dataframe */
+[data-testid="stDataFrame"] {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Cards */
+div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div > div[data-testid="stContainer"] {
+    background: linear-gradient(135deg, #0d1b2a 0%, #162033 100%);
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s ease;
+}
+div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div > div[data-testid="stContainer"]:hover {
+    border-color: #4285f4;
+    box-shadow: 0 4px 20px rgba(66,133,244,0.15);
+}
+
+/* Headings */
+h1, h2, h3 {
+    color: #e8eaed !important;
+}
+
+/* Page title bar */
+.title-bar {
+    background: linear-gradient(135deg, #0a1628 0%, #1a2742 100%);
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    padding: 24px 32px;
+    margin-bottom: 24px;
+}
+.title-bar h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, #8ab4f8, #4285f4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.title-bar p {
+    color: #8899aa;
+    margin: 4px 0 0 0;
+    font-size: 0.95rem;
+}
+
+/* Stat badge */
+.stat-badge {
+    display: inline-block;
+    background: #1e3a5f;
+    color: #8ab4f8;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 2px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# =========================================================
+# PLOTLY THEME
+# =========================================================
+PLOTLY_LAYOUT = dict(
+    template="plotly_dark",
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(13,27,42,0.8)",
+    font=dict(family="Inter", color="#c8d6e5"),
+    margin=dict(l=40, r=20, t=50, b=40),
+    colorway=["#4285f4", "#34a853", "#fbbc04", "#ea4335", "#8ab4f8",
+              "#81c995", "#fdd663", "#f28b82", "#aecbfa", "#a8dab5"],
+)
+
+
+def plotly_fig(**kwargs) -> go.Figure:
+    fig = go.Figure()
+    fig.update_layout(**PLOTLY_LAYOUT, **kwargs)
+    return fig
 
 
 # =========================================================
@@ -53,20 +198,16 @@ def load_data(path: str) -> pd.DataFrame:
 def call_api_prediction(features_dict: dict) -> Optional[float]:
     url = "http://127.0.0.1:8000/predict"
     try:
-        # Nettoyage : conversion en float et remplacement des NaN par 0.0
         clean_features = {}
         for k, v in features_dict.items():
             if pd.isna(v):
                 clean_features[k] = 0.0
             else:
                 clean_features[k] = float(v) if hasattr(v, "item") else v
-                
         response = requests.post(url, json={"features": clean_features}, timeout=5)
-        
         if response.status_code == 200:
             return response.json()["prediction"]
         else:
-            # Afficher l'erreur exacte du serveur pour le debug
             st.error(f"Erreur Backend ({response.status_code}) : {response.text}")
     except Exception as e:
         st.error(f"Erreur de connexion : {e}")
@@ -98,7 +239,6 @@ def guess_target_columns(df: pd.DataFrame) -> Tuple[Optional[str], Optional[str]
         for i, cl in enumerate(cols_low):
             if any(k in cl for k in keys):
                 candidates.append(cols[i])
-
         bad = ["rank", "name", "team", "season", "year", "id"]
         candidates = [c for c in candidates if not any(b in c.lower() for b in bad)]
         return candidates[0] if candidates else None
@@ -120,37 +260,6 @@ def nice_metric_row(metrics: dict):
     c3.metric("R²", f"{metrics['r2']:.3f}")
 
 
-def plot_scatter(y_true: pd.Series, y_pred: np.ndarray, title: str):
-    fig, ax = plt.subplots()
-    ax.scatter(y_true, y_pred)
-    ax.set_title(title)
-    ax.set_xlabel("Vrai")
-    ax.set_ylabel("Prédit")
-    st.pyplot(fig, clear_figure=True)
-
-
-def plot_top_bar(series: pd.Series, title: str, top_n: int = 20):
-    s = series.sort_values(ascending=False).head(top_n)[::-1]
-    fig, ax = plt.subplots()
-    ax.barh(s.index.astype(str), s.values)
-    ax.set_title(title)
-    ax.set_xlabel("Importance")
-    st.pyplot(fig, clear_figure=True)
-
-
-def correlation_heatmap(df: pd.DataFrame, cols: List[str], title: str):
-    corr = df[cols].corr(numeric_only=True)
-    fig, ax = plt.subplots(figsize=(10, 7))
-    im = ax.imshow(corr.values)
-    ax.set_title(title)
-    ax.set_xticks(range(len(corr.columns)))
-    ax.set_yticks(range(len(corr.columns)))
-    ax.set_xticklabels(corr.columns, rotation=90)
-    ax.set_yticklabels(corr.columns)
-    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    st.pyplot(fig, clear_figure=True)
-
-
 def train_model(
     df: pd.DataFrame,
     target_col: str,
@@ -164,11 +273,8 @@ def train_model(
     data = df.dropna(subset=[target_col]).copy()
     X = data[feature_cols].copy()
     y = data[target_col].copy()
-
-    # fill missing in features
     X = X.fillna(X.median(numeric_only=True))
 
-    # time-based split if possible
     if year_col and year_col in data.columns and pd.api.types.is_numeric_dtype(data[year_col]):
         years_sorted = sorted(data[year_col].dropna().unique())
         if len(years_sorted) > test_years:
@@ -178,23 +284,15 @@ def train_model(
             X_train, X_test = X.loc[train_idx], X.loc[test_idx]
             y_train, y_test = y.loc[train_idx], y.loc[test_idx]
         else:
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=random_state
-            )
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=random_state)
     else:
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=random_state
-        )
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=random_state)
 
     model = RandomForestRegressor(
-        n_estimators=n_estimators,
-        random_state=random_state,
-        n_jobs=-1,
-        max_depth=max_depth,
+        n_estimators=n_estimators, random_state=random_state, n_jobs=-1, max_depth=max_depth,
     )
     model.fit(X_train, y_train)
     pred = model.predict(X_test)
-
     metrics = {
         "rmse": rmse(y_test, pred),
         "mae": float(mean_absolute_error(y_test, pred)),
@@ -219,24 +317,60 @@ def load_model(path: Path):
 
 
 # =========================================================
-# WEB ENRICHMENT: ESPN DEPTH CHART + TEAM MAP
+# PLOTLY CHART HELPERS
 # =========================================================
-# ESPN depth chart URLs: https://www.espn.com/nfl/team/depth/_/name/<slug>
-# 1. Mapping complet et exact pour ESPN
-# 1. Mapping exhaustif et exact pour les URLs ESPN
+def plot_scatter_plotly(y_true: pd.Series, y_pred: np.ndarray, title: str):
+    fig = px.scatter(
+        x=y_true, y=y_pred, labels={"x": "Valeur réelle", "y": "Prédiction"},
+        title=title, opacity=0.7,
+    )
+    lo = min(y_true.min(), y_pred.min())
+    hi = max(y_true.max(), y_pred.max())
+    fig.add_trace(go.Scatter(x=[lo, hi], y=[lo, hi], mode="lines",
+                             line=dict(color="#ea4335", dash="dash", width=2),
+                             name="Parfait", showlegend=True))
+    fig.update_layout(**PLOTLY_LAYOUT, title=title)
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_importance_bar(series: pd.Series, title: str, top_n: int = 20):
+    s = series.sort_values(ascending=False).head(top_n)
+    fig = px.bar(
+        x=s.values, y=s.index, orientation="h",
+        title=title, labels={"x": "Importance", "y": "Variable"},
+        color=s.values, color_continuous_scale="Blues",
+    )
+    fig.update_layout(**PLOTLY_LAYOUT, yaxis=dict(autorange="reversed"), showlegend=False,
+                      coloraxis_showscale=False, height=max(400, top_n * 25))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_correlation_heatmap(df: pd.DataFrame, cols: List[str], title: str):
+    corr = df[cols].corr(numeric_only=True)
+    fig = px.imshow(
+        corr, text_auto=".2f", color_continuous_scale="RdBu_r",
+        title=title, aspect="auto", zmin=-1, zmax=1,
+    )
+    fig.update_layout(**PLOTLY_LAYOUT, height=max(500, len(cols) * 30))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# =========================================================
+# TEAM LOCATIONS & ESPN
+# =========================================================
 ESPN_TEAM_SLUG = {
-    "ARI": "ari", "ATL": "atl", "BAL": "bal", "BUF": "buf", "CAR": "car", 
-    "CHI": "chi", "CIN": "cin", "CLE": "cle", "DAL": "dal", "DEN": "den", 
-    "DET": "det", "GB": "gb", "HOU": "hou", "IND": "ind", "JAX": "jax", 
-    "KC": "kc", "LV": "lv", "LAC": "lac", "LAR": "lar", "MIA": "mia", 
-    "MIN": "min", "NE": "ne", "NO": "no", "NYG": "nyg", "NYJ": "nyj", 
-    "PHI": "phi", "PIT": "pit", "SF": "sf", "SEA": "sea", "TB": "tb", 
-    "TEN": "ten", "WAS": "wsh"  # Note: Washington est souvent 'wsh' sur ESPN
+    "ARI": "ari", "ATL": "atl", "BAL": "bal", "BUF": "buf", "CAR": "car",
+    "CHI": "chi", "CIN": "cin", "CLE": "cle", "DAL": "dal", "DEN": "den",
+    "DET": "det", "GB": "gb", "HOU": "hou", "IND": "ind", "JAX": "jax",
+    "KC": "kc", "LV": "lv", "LAC": "lac", "LAR": "lar", "MIA": "mia",
+    "MIN": "min", "NE": "ne", "NO": "no", "NYG": "nyg", "NYJ": "nyj",
+    "PHI": "phi", "PIT": "pit", "SF": "sf", "SEA": "sea", "TB": "tb",
+    "TEN": "ten", "WAS": "wsh"
 }
+
 
 @st.cache_data(show_spinner=False)
 def fetch_team_locations() -> pd.DataFrame:
-    """Récupère les coordonnées avec un secours local complet (32 équipes)."""
     url = "https://raw.githubusercontent.com/Sinbad311/CloudProject/master/NFL%20Stadium%20Latitude%20and%20Longtitude.csv"
     try:
         r = requests.get(url, timeout=5)
@@ -247,9 +381,8 @@ def fetch_team_locations() -> pd.DataFrame:
             loc["team_norm"] = loc["team"].astype(str).str.upper().str.strip()
             return loc
     except Exception:
-        pass 
-    
-    # Secours manuel complet : Les 32 stades NFL
+        pass
+
     data = {
         "team": [
             "Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills", "Carolina Panthers",
@@ -257,7 +390,7 @@ def fetch_team_locations() -> pd.DataFrame:
             "Detroit Lions", "Green Bay Packers", "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars",
             "Kansas City Chiefs", "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
             "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants", "New York Jets",
-            "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers", "Seattle Seahawks", 
+            "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers", "Seattle Seahawks",
             "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"
         ],
         "lat": [33.527, 33.755, 39.278, 42.774, 35.225, 41.862, 39.095, 41.506, 32.747, 39.743, 42.340, 44.501, 29.684, 39.760, 30.323, 39.048, 36.090, 33.953, 33.953, 25.958, 44.973, 42.091, 29.951, 40.812, 40.812, 39.901, 40.446, 37.403, 47.595, 27.975, 36.166, 38.907],
@@ -265,7 +398,6 @@ def fetch_team_locations() -> pd.DataFrame:
         "abbr": ["ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC", "LV", "LAC", "LAR", "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SF", "SEA", "TB", "TEN", "WAS"]
     }
     df_loc = pd.DataFrame(data)
-    # On normalise les noms complets pour la recherche
     df_loc["team_norm"] = df_loc["team"].str.upper().str.strip()
     return df_loc
 
@@ -275,15 +407,11 @@ def normalize_team_key(team_value: str) -> str:
         return ""
     t = str(team_value).strip().upper()
     t = re.sub(r"\s+", " ", t)
-
-    # Some common name swaps
     t = t.replace("WASHINGTON FOOTBALL TEAM", "WAS")
     t = t.replace("WASHINGTON COMMANDERS", "WAS")
     t = t.replace("LAS VEGAS RAIDERS", "LV")
     t = t.replace("LOS ANGELES RAMS", "LAR")
     t = t.replace("LOS ANGELES CHARGERS", "LAC")
-
-    # If already abbreviation-like
     if len(t) in (2, 3) and t.isalpha():
         return t
     return t
@@ -291,141 +419,123 @@ def normalize_team_key(team_value: str) -> str:
 
 @st.cache_data(show_spinner=False)
 def fetch_espn_depth_chart(team_abbr: str) -> pd.DataFrame:
-    """Récupère la composition sur ESPN avec un User-Agent pour éviter le blocage."""
     slug = ESPN_TEAM_SLUG.get(team_abbr.upper())
     if not slug:
         return pd.DataFrame()
-        
     url = f"https://www.espn.com/nfl/team/depth/_/name/{slug}"
     try:
-        # AJOUT INDISPENSABLE : Un Header pour simuler un navigateur (Chrome/Edge)
         headers = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(url, headers=headers, timeout=10)
-        
         if response.status_code == 200:
-            # On lit le HTML contenu dans la réponse
             tables = pd.read_html(response.text)
             return tables[0] if tables else pd.DataFrame()
     except Exception as e:
-        # Affiche l'erreur en cas de problème réseau
-        st.warning(f"Erreur lors de la récupération ESPN : {e}")
-        
+        st.warning(f"Erreur ESPN : {e}")
     return pd.DataFrame()
 
 
 def infer_offensive_formation_from_depth(depth: pd.DataFrame) -> str:
-    """
-    Heuristique simple pour donner un 'label formation' qui fait pro.
-    """
     if depth.empty:
-        return "Formation non disponible (pas de données web)."
-
-    # Try to find a position column (often first col)
+        return "Formation non disponible."
     pos_col = depth.columns[0]
     positions = depth[pos_col].astype(str).str.upper()
-
     rb = positions.str.contains(r"\bRB\b").sum()
     wr = positions.str.contains(r"\bWR\b").sum()
     te = positions.str.contains(r"\bTE\b").sum()
-
     if wr >= 3 and rb >= 1:
-        return "Formation probable : **11 personnel** (1 RB / 1 TE / 3 WR) — estimation"
+        return "**11 personnel** (1 RB / 1 TE / 3 WR)"
     if te >= 2 and rb >= 1:
-        return "Formation probable : **12 personnel** (1 RB / 2 TE) — estimation"
+        return "**12 personnel** (1 RB / 2 TE)"
     if rb >= 2:
-        return "Formation probable : **21 personnel** (2 RB) — estimation"
-    return "Formation : estimation (voir titulaires ci-dessous)"
+        return "**21 personnel** (2 RB)"
+    return "Estimation non concluante"
+
 
 def set_page(name: str):
     st.session_state["page"] = name
 
-def page_card(title: str, desc: str, cta: str, target_page: str, icon: str = "➡️"):
-    with st.container(border=True):
-        st.markdown(f"### {title}")
-        st.caption(desc)
-        st.button(f"{icon} {cta}", use_container_width=True, on_click=set_page, args=(target_page,))
-
-
 
 # =========================================================
-# SIDEBAR NAV
+# SIDEBAR
 # =========================================================
-st.sidebar.title("🏈 NFL Offense Analytics")
+with st.sidebar:
+    st.markdown("""
+    <div style="text-align:center; padding: 16px 0;">
+        <span style="font-size: 2.5rem;">🏈</span>
+        <h2 style="margin: 4px 0 0 0; font-size: 1.2rem; background: linear-gradient(135deg, #8ab4f8, #4285f4); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">NFL Offense Analytics</h2>
+        <p style="color: #5a7a9a; font-size: 0.75rem; margin:0;">2005 — 2024</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-PAGES = [
-    "🏠 Accueil",
-    "📄 Données",
-    "🏟️ Fiche équipe",
-    "🎯 Prévision des points",
-    "📈 Impact des variables sur les yards",
-    "🧪 Qualité & diagnostics",
-    "⚔️ Simulateur de matchs",
-]
+    st.markdown("---")
 
-if "page" not in st.session_state:
-    st.session_state.page = "🏠 Accueil"
+    PAGES = [
+        "Accueil",
+        "Donnees",
+        "Fiche equipe",
+        "Prevision des points",
+        "Drivers des yards",
+        "Qualite & diagnostics",
+        "Simulateur de matchs",
+    ]
 
-selected = st.sidebar.radio(
-    "Navigation",
-    PAGES,
-    index=PAGES.index(st.session_state.page),
-)
+    PAGE_ICONS = {
+        "Accueil": "🏠",
+        "Donnees": "📊",
+        "Fiche equipe": "🏟️",
+        "Prevision des points": "🎯",
+        "Drivers des yards": "📈",
+        "Qualite & diagnostics": "🧪",
+        "Simulateur de matchs": "⚔️",
+    }
 
-# synchro radio → état global
-st.session_state.page = selected
+    if "page" not in st.session_state:
+        st.session_state.page = "Accueil"
+
+    for p in PAGES:
+        icon = PAGE_ICONS.get(p, "")
+        if st.sidebar.button(
+            f"{icon}  {p}",
+            use_container_width=True,
+            key=f"nav_{p}",
+            type="primary" if st.session_state.page == p else "secondary",
+        ):
+            st.session_state.page = p
+            st.rerun()
+
+    st.markdown("---")
+    data_path = st.text_input("Chemin CSV", str(DEFAULT_DATA))
+
 page = st.session_state.page
 
-
-
-st.sidebar.markdown("---")
-data_path = st.sidebar.text_input("Chemin CSV", str(DEFAULT_DATA))
 df = load_data(data_path)
-
 team_col, year_col = infer_time_columns(df)
 points_guess, yards_guess = guess_target_columns(df)
 
-st.sidebar.caption("Conseil : garde le CSV dans `data/raw/` (repo propre).")
-
 
 # =========================================================
-# HEADER
-# =========================================================
-st.title("NFL Offense Analytics (2005–2024)")
-st.caption("Projet portfolio Data Analyst/ML : exploration, prévision, et explication des drivers.")
-
-# =========================================================
-# FONCTIONS DE SIMULATION DE MATCH
+# SIMULATION HELPER
 # =========================================================
 def simulate_match(team1: str, team2: str, df: pd.DataFrame) -> dict:
     latest_year = df[year_col].max()
-    
-    # 1. Récupérer les stats les plus récentes
     t1_row = df[(df[team_col] == team1) & (df[year_col] == latest_year)].iloc[0]
     t2_row = df[(df[team_col] == team2) & (df[year_col] == latest_year)].iloc[0]
-    
-    # 2. Filtrage ROBUSTE des colonnes
-    bad_keywords = ["pts", "points", "score", "year", "season", "rank", "id", "name", "team"]
-    
+
     feature_cols = [
-        c for c in df.select_dtypes(include=[np.number]).columns 
+        c for c in df.select_dtypes(include=[np.number]).columns
         if c not in ["Pts", "Points", "score", "year", "Season", team_col, year_col]
         and not c.lower().startswith(('rank', 'id'))
     ]
-    
     t1_data = {col: t1_row[col] for col in feature_cols}
     t2_data = {col: t2_row[col] for col in feature_cols}
-    
-    # 3. Appels API
+
     score1 = call_api_prediction(t1_data)
     score2 = call_api_prediction(t2_data)
-    
-    # 4. Renvoi des résultats
+
     if score1 is not None and score2 is not None:
         return {
-            'team1': team1, 
-            'team2': team2,
-            'team1_score': round(score1, 1), 
-            'team2_score': round(score2, 1),
+            'team1': team1, 'team2': team2,
+            'team1_score': round(score1, 1), 'team2_score': round(score2, 1),
             'winner': team1 if score1 > score2 else team2,
             'point_diff': round(abs(score1 - score2), 1)
         }
@@ -433,126 +543,104 @@ def simulate_match(team1: str, team2: str, df: pd.DataFrame) -> dict:
 
 
 # =========================================================
-# PAGE 0 — HOME
+# PAGE: ACCUEIL
 # =========================================================
-if page == "🏠 Accueil":
-    st.subheader("Bienvenue 👋")
-    st.write(
-        "Cette application permet d’explorer les attaques NFL (2005–2024), "
-        "de **prédire les points** à partir des statistiques, et d’expliquer les **drivers** "
-        "derrière la performance (yards, efficacité, turnovers, etc.)."
-    )
+if page == "Accueil":
+    st.markdown("""
+    <div class="title-bar">
+        <h1>NFL Offense Analytics</h1>
+        <p>Exploration, prediction et analyse des performances offensives NFL (2005-2024)</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # Image (optionnelle)
+    # KPIs row
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Saisons", f"{df[year_col].nunique() if year_col else '—'}")
+    c2.metric("Equipes", f"{df[team_col].nunique() if team_col else '—'}")
+    c3.metric("Observations", f"{len(df):,}".replace(",", " "))
+    c4.metric("Variables", f"{df.shape[1]}")
+
+    st.markdown("")
+
     hero_path = ROOT / "assets" / "home.png"
-    # Image centrée
     if hero_path.exists():
-        c1, c2, c3 = st.columns([1, 2, 1])
+        _, c2, _ = st.columns([1, 2, 1])
         with c2:
-            st.image(str(hero_path), width=650)
+            st.image(str(hero_path), use_container_width=True)
 
-
-    else:
-        st.info("Ajoute une image dans `assets/home.png` pour afficher une bannière ici.")
-
-    st.markdown("### 🚀 Accès rapide")
+    st.markdown("### Acces rapide")
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        page_card(
-            "📄 Données",
-            "Aperçu du dataset, filtres équipe/saison, valeurs manquantes, heatmap de corrélations.",
-            "Explorer les données",
-            "📄 Données",
-            icon="🔎",
-        )
+        with st.container(border=True):
+            st.markdown("#### 📊 Donnees")
+            st.caption("Filtres, apercu, valeurs manquantes, heatmap de correlations.")
+            st.button("Explorer les donnees", use_container_width=True, on_click=set_page, args=("Donnees",), key="home_data")
 
     with c2:
-        page_card(
-            "🎯 Prévision des points",
-            "Entraîne un RandomForest, métriques RMSE/MAE/R², importances + simulateur what-if.",
-            "Faire une prédiction",
-            "🎯 Prévision des points",
-            icon="🧠",
-        )
+        with st.container(border=True):
+            st.markdown("#### 🎯 Prediction")
+            st.caption("RandomForest, metriques RMSE/MAE/R², importances, simulateur what-if.")
+            st.button("Faire une prediction", use_container_width=True, on_click=set_page, args=("Prevision des points",), key="home_pred")
 
     with c3:
-        page_card(
-            "⚔️ Simulateur de matchs",
-            "Simulez un match entre deux équipes et prédisez le score final basé sur leurs statistiques offensives.",
-            "Lancer une simulation",
-            "⚔️ Simulateur de matchs",
-            icon="⚔️",
-        )
+        with st.container(border=True):
+            st.markdown("#### ⚔️ Simulateur")
+            st.caption("Simulez un match entre deux equipes et predisez le score final.")
+            st.button("Lancer une simulation", use_container_width=True, on_click=set_page, args=("Simulateur de matchs",), key="home_sim")
 
-    st.markdown("### Autres fonctionnalités")
+    st.markdown("")
     c4, c5, c6 = st.columns(3)
 
     with c4:
-        page_card(
-            "🏟️ Fiche équipe",
-            "Storytelling par équipe : profil, tendances, carte, depth chart ESPN (si web dispo).",
-            "Voir une équipe",
-            "🏟️ Fiche équipe",
-            icon="🏈",
-        )
+        with st.container(border=True):
+            st.markdown("#### 🏟️ Fiche equipe")
+            st.caption("Profil, tendances, classement, carte et depth chart ESPN.")
+            st.button("Voir une equipe", use_container_width=True, on_click=set_page, args=("Fiche equipe",), key="home_team")
 
-    st.markdown("### 📌 Les autres modules")
-    c4, c5 = st.columns(2)
-    with c4:
-        page_card(
-            "📈 Drivers des yards",
-            "Analyse des variables qui expliquent le plus les yards : importances + corrélations.",
-            "Analyser les drivers",
-            "📈 Impact des variables sur les yards",
-            icon="📊",
-        )
     with c5:
-        page_card(
-            "🧪 Qualité & diagnostics",
-            "Checks qualité : duplicats, outliers IQR, export d’un sample nettoyé.",
-            "Voir les diagnostics",
-            "🧪 Qualité & diagnostics",
-            icon="✅",
-        )
+        with st.container(border=True):
+            st.markdown("#### 📈 Drivers des yards")
+            st.caption("Variables qui expliquent le plus les yards : importances + correlations.")
+            st.button("Analyser les drivers", use_container_width=True, on_click=set_page, args=("Drivers des yards",), key="home_yards")
 
-    st.markdown("---")
-    st.caption("Astuce : commence par la page 📄 Données pour vérifier la qualité et les colonnes détectées.")
+    with c6:
+        with st.container(border=True):
+            st.markdown("#### 🧪 Qualite")
+            st.caption("Duplicats, outliers IQR, distribution, export sample nettoye.")
+            st.button("Diagnostics", use_container_width=True, on_click=set_page, args=("Qualite & diagnostics",), key="home_qa")
+
 
 # =========================================================
-# PAGE 1 — DATA
+# PAGE: DONNEES
 # =========================================================
-elif page == "📄 Données":
-    st.subheader("Aperçu & exploration")
+elif page == "Donnees":
+    st.markdown("""
+    <div class="title-bar">
+        <h1>📊 Exploration des donnees</h1>
+        <p>Filtres, apercu, valeurs manquantes et correlations</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Lignes", f"{len(df):,}".replace(",", " "))
     c2.metric("Colonnes", f"{df.shape[1]}")
-    c3.metric("Équipes (si détecté)", f"{df[team_col].nunique() if team_col else '—'}")
-    c4.metric("Saisons (si détecté)", f"{df[year_col].nunique() if year_col else '—'}")
+    c3.metric("Equipes", f"{df[team_col].nunique() if team_col else '—'}")
+    c4.metric("Saisons", f"{df[year_col].nunique() if year_col else '—'}")
 
-    with st.expander("🔎 Filtres", expanded=True):
+    with st.expander("Filtres", expanded=True):
         colA, colB, colC = st.columns(3)
-
         if team_col:
             teams = sorted(df[team_col].dropna().unique().tolist())
-            team_sel = colA.selectbox("Équipe", ["(toutes)"] + teams)
+            team_sel = colA.selectbox("Equipe", ["(toutes)"] + teams)
         else:
             team_sel = "(toutes)"
-            colA.info("Colonne équipe non détectée.")
-
         if year_col:
             years = sorted(df[year_col].dropna().unique().tolist())
-            year_min, year_max = colB.select_slider(
-                "Plage de saisons",
-                options=years,
-                value=(years[0], years[-1]),
-            )
+            year_min, year_max = colB.select_slider("Saisons", options=years, value=(years[0], years[-1]))
         else:
             year_min, year_max = None, None
-            colB.info("Colonne saison/année non détectée.")
-
-        n_rows = colC.slider("Nombre de lignes affichées", 10, 300, 50)
+        n_rows = colC.slider("Lignes affichees", 10, 300, 50)
 
     view = df.copy()
     if team_col and team_sel != "(toutes)":
@@ -562,175 +650,161 @@ elif page == "📄 Données":
 
     st.dataframe(view.head(n_rows), use_container_width=True)
 
-    st.markdown("### Valeurs manquantes & types")
+    st.markdown("### Valeurs manquantes")
     missing = (df.isna().mean() * 100).sort_values(ascending=False)
-    st.dataframe(
-        pd.DataFrame({"missing_%": missing.round(2), "dtype": df.dtypes.astype(str)}),
-        use_container_width=True,
-    )
+    miss_df = pd.DataFrame({"missing_%": missing.round(2), "dtype": df.dtypes.astype(str)})
+    if missing.sum() == 0:
+        st.success("Aucune valeur manquante dans le dataset !")
+    else:
+        st.dataframe(miss_df[miss_df["missing_%"] > 0], use_container_width=True)
 
-    st.markdown("### Corrélations (numériques)")
+    st.markdown("### Correlations")
     num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     if len(num_cols) >= 3:
         corr_cols = st.multiselect(
-            "Choisis des colonnes pour la heatmap",
+            "Colonnes pour la heatmap",
             options=num_cols,
-            default=num_cols[:12] if len(num_cols) > 12 else num_cols,
+            default=num_cols[:10] if len(num_cols) > 10 else num_cols,
         )
         if len(corr_cols) >= 3:
-            correlation_heatmap(df, corr_cols, "Heatmap corrélation (sélection)")
+            plot_correlation_heatmap(df, corr_cols, "Matrice de correlation")
         else:
-            st.info("Sélectionne au moins 3 colonnes numériques.")
-    else:
-        st.info("Pas assez de colonnes numériques pour afficher une heatmap.")
+            st.info("Selectionne au moins 3 colonnes.")
 
 
 # =========================================================
-# PAGE 2 — TEAM PAGE
+# PAGE: FICHE EQUIPE
 # =========================================================
-elif page == "🏟️ Fiche équipe":
-    st.subheader("Fiche équipe — présentation, positionnement, carte & titulaires")
+elif page == "Fiche equipe":
+    st.markdown("""
+    <div class="title-bar">
+        <h1>🏟️ Fiche equipe</h1>
+        <p>Profil, tendances, classement et carte</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     if not team_col:
-        st.error("Je ne détecte pas de colonne équipe (team/franchise) dans ton CSV.")
+        st.error("Colonne equipe non detectee dans le CSV.")
         st.stop()
 
     teams = sorted(df[team_col].dropna().unique().tolist())
-    team_sel = st.selectbox("Choisir une équipe", teams)
-
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    if not numeric_cols:
-        st.error("Je n’ai pas trouvé de colonnes numériques : impossible de calculer le positionnement.")
-        st.stop()
 
-    # Pick KPI columns
     colA, colB, colC = st.columns(3)
-    points_col = colA.selectbox(
-        "KPI Points (pour l’analyse)",
-        options=numeric_cols,
+    team_sel = colA.selectbox("Equipe", teams)
+    points_col = colB.selectbox(
+        "KPI Points", options=numeric_cols,
         index=(numeric_cols.index(points_guess) if points_guess in numeric_cols else 0),
     )
-    yards_col = colB.selectbox(
-        "KPI Yards (pour l’analyse)",
-        options=numeric_cols,
-        index=(numeric_cols.index(yards_guess) if yards_guess in numeric_cols else min(1, len(numeric_cols)-1)),
+    yards_col = colC.selectbox(
+        "KPI Yards", options=numeric_cols,
+        index=(numeric_cols.index(yards_guess) if yards_guess in numeric_cols else min(1, len(numeric_cols) - 1)),
     )
 
     view = df[df[team_col] == team_sel].copy()
 
     if year_col and year_col in df.columns:
         years = sorted(df[year_col].dropna().unique().tolist())
-        year_min, year_max = colC.select_slider("Période", options=years, value=(years[0], years[-1]))
+        year_min, year_max = st.select_slider("Periode", options=years, value=(years[0], years[-1]))
         view = view[(view[year_col] >= year_min) & (view[year_col] <= year_max)]
-    else:
-        year_min, year_max = None, None
-        colC.info("Pas de colonne saison/année détectée.")
 
-    st.markdown("### 📝 Présentation (auto-générée)")
+    # Presentation
     if year_col and year_col in view.columns and len(view) > 0:
         best_year = int(view.loc[view[points_col].idxmax(), year_col])
         best_points = float(view[points_col].max())
         mean_points = float(view[points_col].mean())
         mean_yards = float(view[yards_col].mean())
-        st.write(
-            f"**{team_sel}** — Sur la période sélectionnée, l’équipe affiche en moyenne "
-            f"**{mean_points:.2f}** ({points_col}) et **{mean_yards:.2f}** ({yards_col}). "
-            f"Son meilleur pic de {points_col} est atteint en **{best_year}** avec **{best_points:.2f}**."
-        )
-    else:
-        st.write(
-            f"**{team_sel}** — Profil basé sur ton dataset (sur la sélection actuelle). "
-            f"Ajoute une colonne year/season pour un storytelling saison par saison."
-        )
 
-    st.markdown("### 🏁 Positionnement par saison (classement vs ligue)")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Moy. Points", f"{mean_points:.1f}")
+        c2.metric("Moy. Yards", f"{mean_yards:.1f}")
+        c3.metric("Meilleure saison", str(best_year))
+        c4.metric("Record points", f"{best_points:.1f}")
+
+    # Trend charts
+    if year_col and year_col in view.columns and len(view) > 1:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            fig = px.line(
+                view.sort_values(year_col), x=year_col, y=points_col,
+                title=f"{team_sel} — Evolution {points_col}",
+                markers=True,
+            )
+            fig.update_layout(**PLOTLY_LAYOUT)
+            fig.update_traces(line=dict(color="#4285f4", width=3), marker=dict(size=8))
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            fig = px.line(
+                view.sort_values(year_col), x=year_col, y=yards_col,
+                title=f"{team_sel} — Evolution {yards_col}",
+                markers=True,
+            )
+            fig.update_layout(**PLOTLY_LAYOUT)
+            fig.update_traces(line=dict(color="#34a853", width=3), marker=dict(size=8))
+            st.plotly_chart(fig, use_container_width=True)
+
+    # Ranking
     if year_col and year_col in df.columns:
+        st.markdown("### Classement par saison")
         season_df = df.dropna(subset=[year_col]).copy()
+        season_df["rank"] = season_df.groupby(year_col)[points_col].rank(ascending=False, method="min")
+        team_season = season_df[season_df[team_col] == team_sel][[year_col, points_col, yards_col, "rank"]].sort_values(year_col)
+        team_season["rank"] = team_season["rank"].astype(int)
 
-        # rank points per season (1=best)
-        season_df["__rank_points"] = season_df.groupby(year_col)[points_col].rank(ascending=False, method="min")
-        season_df["__n"] = season_df.groupby(year_col)[points_col].transform("count")
-
-        team_season = season_df[season_df[team_col] == team_sel][
-            [year_col, points_col, yards_col, "__rank_points", "__n"]
-        ].copy()
-        team_season = team_season.sort_values(year_col)
-        team_season["rank_points"] = team_season["__rank_points"].astype(int)
-        team_season["teams_in_season"] = team_season["__n"].astype(int)
-
-        st.dataframe(
-            team_season[[year_col, points_col, yards_col, "rank_points", "teams_in_season"]],
-            use_container_width=True
+        fig = px.bar(
+            team_season, x=year_col, y="rank",
+            title=f"{team_sel} — Classement NFL (1 = meilleur)",
+            color="rank", color_continuous_scale="RdYlGn_r",
         )
+        fig.update_layout(**PLOTLY_LAYOUT, yaxis=dict(autorange="reversed"), coloraxis_showscale=False)
+        st.plotly_chart(fig, use_container_width=True)
 
-        # trend
-        fig, ax = plt.subplots()
-        ax.plot(team_season[year_col], team_season[points_col])
-        ax.set_title(f"{team_sel} — évolution {points_col}")
-        ax.set_xlabel("Saison")
-        ax.set_ylabel(points_col)
-        st.pyplot(fig, clear_figure=True)
-
-        # rank trend
-        fig, ax = plt.subplots()
-        ax.plot(team_season[year_col], team_season["rank_points"])
-        ax.invert_yaxis()
-        ax.set_title(f"{team_sel} — classement (1 = meilleur)")
-        ax.set_xlabel("Saison")
-        ax.set_ylabel("Rang")
-        st.pyplot(fig, clear_figure=True)
-    else:
-        st.info("Pas de colonne year/season détectée → impossible de faire un classement par saison.")
-
-    st.markdown("### 🗺️ Carte : emplacement de l’équipe (USA)")
-    st.caption("Coordonnées issues d’un dataset public (si internet disponible).")
-
+    # Map
+    st.markdown("### Localisation")
     loc = fetch_team_locations()
     team_key = normalize_team_key(team_sel)
-
-    # try to match coordinates
     map_row = pd.DataFrame()
     if not loc.empty:
-        # On normalise la sélection actuelle
         sel_norm = team_sel.upper().strip()
-        # On cherche soit par le nom complet normalisé, soit par l'abréviation
         map_row = loc[(loc["team_norm"] == sel_norm) | (loc.get("abbr") == team_key)]
-
     if not map_row.empty:
-        st.map(map_row)
+        st.map(map_row, zoom=5)
     else:
-        st.warning("Coordonnées indisponibles (internet bloqué ou nom d’équipe non reconnu).")
+        st.warning("Coordonnees indisponibles.")
 
-        
-    # Let user choose an ESPN abbreviation
+    # ESPN
+    st.markdown("### Depth Chart ESPN")
     default_abbr = team_key if team_key in ESPN_TEAM_SLUG else ""
-    abbr = st.text_input("Abréviation ESPN (ex: DAL, NE, KC…)", value=default_abbr)
-
+    abbr = st.text_input("Abreviation ESPN (ex: DAL, NE, KC)", value=default_abbr)
     if abbr.strip():
         depth = fetch_espn_depth_chart(abbr.strip().upper())
         if depth.empty:
-            st.info("Depth chart indisponible (abréviation invalide ou pas d’accès internet).")
+            st.info("Depth chart indisponible.")
         else:
-            st.write(infer_offensive_formation_from_depth(depth))
+            st.markdown(f"Formation estimee : {infer_offensive_formation_from_depth(depth)}")
             st.dataframe(depth, use_container_width=True)
-    else:
-        st.info("Entre une abréviation ESPN pour charger le depth chart.")
 
 
 # =========================================================
-# PAGE 3 — POINTS PREDICTION
+# PAGE: PREVISION DES POINTS
 # =========================================================
-elif page == "🎯 Prévision des points":
-    st.subheader("Prédire les points + expliquer le modèle (et faire du what-if)")
+elif page == "Prevision des points":
+    st.markdown("""
+    <div class="title-bar">
+        <h1>🎯 Prevision des points</h1>
+        <p>Modele RandomForest, metriques, importances et simulateur what-if</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     if not numeric_cols:
-        st.error("Pas de colonnes numériques → impossible de faire un modèle.")
+        st.error("Pas de colonnes numeriques.")
         st.stop()
 
     points_target = st.selectbox(
-        "Colonne cible (points)",
-        options=numeric_cols,
+        "Colonne cible (points)", options=numeric_cols,
         index=(numeric_cols.index(points_guess) if points_guess in numeric_cols else 0),
     )
 
@@ -739,78 +813,67 @@ elif page == "🎯 Prévision des points":
         exclude.append(team_col)
     if year_col:
         exclude.append(year_col)
-
     feat_cols = numeric_feature_columns(df, exclude=exclude)
-    st.caption(f"{len(feat_cols)} variables numériques utilisées pour prédire `{points_target}`.")
 
-    with st.expander("⚙️ Réglages", expanded=True):
+    st.markdown(f'<span class="stat-badge">{len(feat_cols)} features</span> <span class="stat-badge">Cible : {points_target}</span>', unsafe_allow_html=True)
+
+    with st.expander("Reglages du modele", expanded=False):
         col1, col2, col3, col4 = st.columns(4)
-        test_years = col1.slider("Holdout (années)", 1, 8, 3)
+        test_years = col1.slider("Holdout (annees)", 1, 8, 3)
         n_estimators = col2.slider("Arbres", 100, 1200, 600, step=50)
         max_depth = col3.selectbox("Max depth", options=[None, 5, 10, 15, 20, 30], index=0)
         random_state = col4.number_input("Random state", value=42, step=1)
-        use_saved = st.checkbox("Charger modèle sauvegardé si dispo", value=True)
+        use_saved = st.checkbox("Charger modele sauvegarde si dispo", value=True)
 
     model_path = MODELS_DIR / f"rf_points__{points_target}.pkl"
     model = load_model(model_path) if use_saved else None
 
-    if st.button("🚀 Entraîner / re-entraîner"):
-        model = None  # force retrain
+    if st.button("Entrainer / re-entrainer", use_container_width=True):
+        model = None
 
     if model is None:
-        with st.spinner("Entraînement…"):
+        with st.spinner("Entrainement en cours..."):
             model, metrics, X_train, X_test, y_train, y_test = train_model(
-                df,
-                target_col=points_target,
-                feature_cols=feat_cols,
-                test_years=test_years,
-                year_col=year_col,
-                random_state=int(random_state),
-                n_estimators=int(n_estimators),
-                max_depth=max_depth,
+                df, target_col=points_target, feature_cols=feat_cols,
+                test_years=test_years, year_col=year_col,
+                random_state=int(random_state), n_estimators=int(n_estimators), max_depth=max_depth,
             )
             if joblib is not None:
                 save_model(model, model_path)
+            (REPORTS_DIR / "metrics_points.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
-            (REPORTS_DIR / "metrics_points.json").write_text(
-                json.dumps(metrics, indent=2), encoding="utf-8"
-            )
-
-        st.success("Modèle prêt ✅")
+        st.success("Modele entraine avec succes !")
         nice_metric_row(metrics)
 
         pred = model.predict(X_test.fillna(X_test.median(numeric_only=True)))
-        plot_scatter(y_test, pred, "Prédit vs Vrai (holdout)")
 
-        st.markdown("### Variables les plus importantes (RandomForest)")
-        fi = pd.Series(model.feature_importances_, index=feat_cols).sort_values(ascending=False)
-        plot_top_bar(fi, "Top importances — Points", top_n=25)
+        col1, col2 = st.columns(2)
+        with col1:
+            plot_scatter_plotly(y_test, pred, "Predictions vs Valeurs reelles")
+        with col2:
+            fi = pd.Series(model.feature_importances_, index=feat_cols).sort_values(ascending=False)
+            plot_importance_bar(fi, "Importances RandomForest", top_n=15)
 
-        st.markdown("### Importance par permutation (plus robuste)")
-        with st.spinner("Permutation importance…"):
+        st.markdown("### Importance par permutation")
+        with st.spinner("Calcul..."):
             perm = permutation_importance(
-                model,
-                X_test.fillna(X_test.median(numeric_only=True)),
-                y_test,
-                n_repeats=10,
-                random_state=int(random_state),
-                n_jobs=-1,
+                model, X_test.fillna(X_test.median(numeric_only=True)), y_test,
+                n_repeats=10, random_state=int(random_state), n_jobs=-1,
             )
         perm_imp = pd.Series(perm.importances_mean, index=feat_cols).sort_values(ascending=False)
-        plot_top_bar(perm_imp, "Permutation importance — Points", top_n=25)
+        plot_importance_bar(perm_imp, "Permutation Importance", top_n=15)
     else:
-        st.info("Modèle chargé depuis `models/` (coche re-entraîner si tu veux recalculer).")
+        st.info("Modele charge depuis `models/`. Cliquez sur le bouton pour re-entrainer.")
 
     st.markdown("---")
-    st.markdown("## 🎛️ Simulateur what-if : prédire des points avec tes valeurs")
+    st.markdown("### Simulateur what-if")
 
     if model is None:
-        st.warning("Entraîne ou charge un modèle d’abord.")
+        st.warning("Entrainez un modele d'abord.")
     else:
         chosen_vars = st.multiselect(
-            "Variables à piloter",
-            options=feat_cols,
-            default=feat_cols[:8] if len(feat_cols) >= 8 else feat_cols,
+            "Variables a piloter", options=feat_cols,
+            default=feat_cols[:6] if len(feat_cols) >= 6 else feat_cols,
         )
         if chosen_vars:
             X_base = df[feat_cols].copy().fillna(df[feat_cols].median(numeric_only=True))
@@ -827,26 +890,29 @@ elif page == "🎯 Prévision des points":
             row = med.copy()
             for k, val in inputs.items():
                 row[k] = val
-
             X_one = pd.DataFrame([row], columns=feat_cols)
             y_hat = float(model.predict(X_one)[0])
-            st.metric("Points prédits", f"{y_hat:.2f}")
+            st.metric("Points predits", f"{y_hat:.2f}")
 
 
 # =========================================================
-# PAGE 4 — YARDS DRIVERS
+# PAGE: DRIVERS DES YARDS
 # =========================================================
-elif page == "📈 Impact des variables sur les yards":
-    st.subheader("Drivers des yards : quelles variables expliquent le plus ?")
+elif page == "Drivers des yards":
+    st.markdown("""
+    <div class="title-bar">
+        <h1>📈 Drivers des yards</h1>
+        <p>Quelles variables expliquent le plus les yards totaux ?</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     if not numeric_cols:
-        st.error("Pas de colonnes numériques → impossible de faire l’analyse.")
+        st.error("Pas de colonnes numeriques.")
         st.stop()
 
     yards_target = st.selectbox(
-        "Colonne cible (yards)",
-        options=numeric_cols,
+        "Colonne cible (yards)", options=numeric_cols,
         index=(numeric_cols.index(yards_guess) if yards_guess in numeric_cols else 0),
     )
 
@@ -855,55 +921,53 @@ elif page == "📈 Impact des variables sur les yards":
         exclude.append(team_col)
     if year_col:
         exclude.append(year_col)
-
     feat_cols = numeric_feature_columns(df, exclude=exclude)
 
-    with st.expander("⚙️ Réglages", expanded=True):
+    with st.expander("Reglages", expanded=False):
         col1, col2, col3 = st.columns(3)
-        test_years = col1.slider("Holdout (années)", 1, 8, 3, key="yards_holdout")
+        test_years = col1.slider("Holdout (annees)", 1, 8, 3, key="yards_holdout")
         n_estimators = col2.slider("Arbres", 100, 1200, 600, step=50, key="yards_trees")
         random_state = col3.number_input("Random state", value=42, step=1, key="yards_rs")
 
-    if st.button("🔍 Calculer les drivers (yards)"):
-        with st.spinner("Entraînement + calcul importances…"):
+    if st.button("Calculer les drivers", use_container_width=True):
+        with st.spinner("Analyse en cours..."):
             model, metrics, X_train, X_test, y_train, y_test = train_model(
-                df,
-                target_col=yards_target,
-                feature_cols=feat_cols,
-                test_years=test_years,
-                year_col=year_col,
-                random_state=int(random_state),
-                n_estimators=int(n_estimators),
-                max_depth=None,
+                df, target_col=yards_target, feature_cols=feat_cols,
+                test_years=test_years, year_col=year_col,
+                random_state=int(random_state), n_estimators=int(n_estimators), max_depth=None,
             )
-
             pred = model.predict(X_test.fillna(X_test.median(numeric_only=True)))
 
-        st.success("Analyse prête ✅")
+        st.success("Analyse terminee !")
         nice_metric_row(metrics)
-        plot_scatter(y_test, pred, "Prédit vs Vrai (yards holdout)")
 
-        st.markdown("### RandomForest importances")
-        fi = pd.Series(model.feature_importances_, index=feat_cols).sort_values(ascending=False)
-        plot_top_bar(fi, "Top importances — Yards", top_n=25)
+        col1, col2 = st.columns(2)
+        with col1:
+            plot_scatter_plotly(y_test, pred, "Predictions vs Valeurs reelles (yards)")
+        with col2:
+            fi = pd.Series(model.feature_importances_, index=feat_cols).sort_values(ascending=False)
+            plot_importance_bar(fi, "Importances RandomForest — Yards", top_n=15)
 
-        st.markdown("### Permutation importance (recommandé)")
-        with st.spinner("Permutation importance…"):
+        st.markdown("### Permutation importance")
+        with st.spinner("Calcul..."):
             perm = permutation_importance(
-                model,
-                X_test.fillna(X_test.median(numeric_only=True)),
-                y_test,
-                n_repeats=10,
-                random_state=int(random_state),
-                n_jobs=-1,
+                model, X_test.fillna(X_test.median(numeric_only=True)), y_test,
+                n_repeats=10, random_state=int(random_state), n_jobs=-1,
             )
         perm_imp = pd.Series(perm.importances_mean, index=feat_cols).sort_values(ascending=False)
-        plot_top_bar(perm_imp, "Permutation importance — Yards", top_n=25)
+        plot_importance_bar(perm_imp, "Permutation Importance — Yards", top_n=15)
 
-        st.markdown("### Top corrélations avec la cible (simple & parlant)")
+        st.markdown("### Top correlations avec la cible")
         corr = df[feat_cols + [yards_target]].corr(numeric_only=True)[yards_target].drop(yards_target)
         corr = corr.sort_values(key=lambda s: s.abs(), ascending=False)
-        st.dataframe(pd.DataFrame({"corr_with_target": corr.round(3)}).head(25), use_container_width=True)
+
+        fig = px.bar(
+            x=corr.head(15).values, y=corr.head(15).index, orientation="h",
+            title="Correlation avec la cible", labels={"x": "Correlation", "y": "Variable"},
+            color=corr.head(15).values, color_continuous_scale="RdBu_r",
+        )
+        fig.update_layout(**PLOTLY_LAYOUT, coloraxis_showscale=False, yaxis=dict(autorange="reversed"))
+        st.plotly_chart(fig, use_container_width=True)
 
         out = {
             "target": yards_target,
@@ -912,80 +976,155 @@ elif page == "📈 Impact des variables sur les yards":
             "top_perm": perm_imp.head(25).to_dict(),
         }
         (REPORTS_DIR / "yards_drivers.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
-        st.caption("Sauvegardé : `reports/yards_drivers.json`")
 
 
 # =========================================================
-# PAGE 6 — SIMULATEUR DE MATCHS
+# PAGE: SIMULATEUR DE MATCHS
 # =========================================================
-elif page == "⚔️ Simulateur de matchs":
-    st.title("⚔️ Simulateur de matchs NFL")
-    
-    # Check de connexion pour le jury
+elif page == "Simulateur de matchs":
+    st.markdown("""
+    <div class="title-bar">
+        <h1>⚔️ Simulateur de matchs NFL</h1>
+        <p>Predisez le score d'un match a partir des statistiques offensives</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Backend check
     try:
-        requests.get(url = "http://127.0.0.1:8000/", timeout=1)
-        st.success("Connexion Backend FastAPI : OK ✅")
-    except:
-        st.error("Backend FastAPI HORS-LIGNE ❌ (Lancez 'uvicorn api:app' dans un terminal)")
+        requests.get(url="http://127.0.0.1:8000/", timeout=1)
+        st.success("Backend FastAPI connecte")
+    except Exception:
+        st.error("Backend FastAPI hors-ligne — Lancez `uvicorn api:app` dans un terminal")
+
+    if not team_col:
+        st.error("Colonne equipe non detectee.")
+        st.stop()
 
     teams = sorted(df[team_col].unique())
-    col1, col2 = st.columns(2)
-    team1 = col1.selectbox("Équipe à domicile", teams, index=0)
-    team2 = col2.selectbox("Équipe à l'extérieur", [t for t in teams if t != team1], index=1)
 
-    if st.button("Lancer la simulation", use_container_width=True):
-        with st.spinner("Calcul des probabilités via l'API..."):
+    col1, _, col2 = st.columns([5, 1, 5])
+
+    with col1:
+        st.markdown("### 🏠 Domicile")
+        team1 = st.selectbox("Equipe domicile", teams, index=0)
+        if year_col:
+            latest = df[year_col].max()
+            t1_stats = df[(df[team_col] == team1) & (df[year_col] == latest)]
+            if not t1_stats.empty and points_guess:
+                c1, c2 = st.columns(2)
+                c1.metric("Points/match", f"{t1_stats[points_guess].values[0]:.1f}")
+                if yards_guess:
+                    c2.metric("Yards/match", f"{t1_stats[yards_guess].values[0]:.1f}")
+
+    with col2:
+        st.markdown("### ✈️ Exterieur")
+        away_teams = [t for t in teams if t != team1]
+        team2 = st.selectbox("Equipe exterieur", away_teams, index=min(1, len(away_teams) - 1))
+        if year_col:
+            t2_stats = df[(df[team_col] == team2) & (df[year_col] == latest)]
+            if not t2_stats.empty and points_guess:
+                c1, c2 = st.columns(2)
+                c1.metric("Points/match", f"{t2_stats[points_guess].values[0]:.1f}")
+                if yards_guess:
+                    c2.metric("Yards/match", f"{t2_stats[yards_guess].values[0]:.1f}")
+
+    st.markdown("")
+    if st.button("Lancer la simulation", use_container_width=True, type="primary"):
+        with st.spinner("Prediction via l'API..."):
             result = simulate_match(team1, team2, df)
             if result:
                 st.markdown("---")
                 c1, c2, c3 = st.columns([2, 1, 2])
-                c1.metric(result['team1'], f"{result['team1_score']} pts")
-                c2.markdown("<h2 style='text-align: center;'>VS</h2>", unsafe_allow_html=True)
-                c3.metric(result['team2'], f"{result['team2_score']} pts")
+                with c1:
+                    score_color = "#34a853" if result['team1_score'] >= result['team2_score'] else "#ea4335"
+                    st.markdown(f"""
+                    <div style="text-align:center; padding:20px;">
+                        <h2 style="color: {score_color};">{result['team1']}</h2>
+                        <h1 style="font-size:3rem; color: {score_color};">{result['team1_score']}</h1>
+                        <p style="color:#8899aa;">points predits</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with c2:
+                    st.markdown("""
+                    <div style="text-align:center; padding:40px 0;">
+                        <h1 style="font-size:2rem; color:#5a7a9a;">VS</h1>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with c3:
+                    score_color = "#34a853" if result['team2_score'] >= result['team1_score'] else "#ea4335"
+                    st.markdown(f"""
+                    <div style="text-align:center; padding:20px;">
+                        <h2 style="color: {score_color};">{result['team2']}</h2>
+                        <h1 style="font-size:3rem; color: {score_color};">{result['team2_score']}</h1>
+                        <p style="color:#8899aa;">points predits</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
                 st.balloons()
-                st.success(f"Victoire de **{result['winner']}** (+{result['point_diff']} pts)")
+                st.success(f"Victoire predite : **{result['winner']}** (+{result['point_diff']} pts)")
+            else:
+                st.error("Erreur lors de la simulation. Verifiez que le backend est en marche.")
 
 
 # =========================================================
-# PAGE 5 — QA
+# PAGE: QUALITE & DIAGNOSTICS
 # =========================================================
-elif page == "🧪 Qualité & diagnostics":
-    st.subheader("Qualité des données & checks (style entreprise)")
+elif page == "Qualite & diagnostics":
+    st.markdown("""
+    <div class="title-bar">
+        <h1>🧪 Qualite & diagnostics</h1>
+        <p>Verification de la qualite des donnees</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown("### Duplicates")
+    # Summary metrics
     dup = int(df.duplicated().sum())
-    st.write(f"- Lignes dupliquées : **{dup}**")
-
-    st.markdown("### Outliers (IQR)")
     num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    if not num_cols:
-        st.info("Aucune colonne numérique.")
-    else:
-        col = st.selectbox("Choisir une colonne", num_cols)
+    missing_total = int(df.isna().sum().sum())
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Doublons", f"{dup}")
+    c2.metric("Valeurs manquantes", f"{missing_total}")
+    c3.metric("Colonnes numeriques", f"{len(num_cols)}")
+
+    st.markdown("### Distribution & outliers")
+    if num_cols:
+        col = st.selectbox("Colonne", num_cols)
         s = df[col].dropna()
         q1, q3 = s.quantile(0.25), s.quantile(0.75)
         iqr = q3 - q1
         lo, hi = q1 - 1.5 * iqr, q3 + 1.5 * iqr
         out_count = int(((s < lo) | (s > hi)).sum())
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Q1", f"{q1:.3f}")
-        c2.metric("Q3", f"{q3:.3f}")
-        c3.metric("Outliers (IQR)", f"{out_count}")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Q1", f"{q1:.2f}")
+        c2.metric("Q3", f"{q3:.2f}")
+        c3.metric("IQR", f"{iqr:.2f}")
+        c4.metric("Outliers", f"{out_count}")
 
-        fig, ax = plt.subplots()
-        ax.hist(s.values, bins=30)
-        ax.set_title(f"Distribution — {col}")
-        ax.set_xlabel(col)
-        ax.set_ylabel("Count")
-        st.pyplot(fig, clear_figure=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            fig = px.histogram(
+                s, nbins=30, title=f"Distribution — {col}",
+                labels={"value": col, "count": "Frequence"},
+                color_discrete_sequence=["#4285f4"],
+            )
+            fig.update_layout(**PLOTLY_LAYOUT)
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            fig = px.box(
+                df, y=col, title=f"Box plot — {col}",
+                color_discrete_sequence=["#4285f4"],
+            )
+            fig.update_layout(**PLOTLY_LAYOUT)
+            st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
-    st.markdown("### Export rapide (sample nettoyé)")
-    if st.button("💾 Exporter un sample nettoyé (numériques fill median)"):
+    if st.button("Exporter un sample nettoye"):
         out = df.copy()
         num = out.select_dtypes(include=[np.number]).columns
         out[num] = out[num].fillna(out[num].median(numeric_only=True))
         out_path = REPORTS_DIR / "sample_cleaned.csv"
         out.head(500).to_csv(out_path, index=False)
-        st.success(f"Exporté : {out_path}")
+        st.success(f"Exporte : {out_path}")
