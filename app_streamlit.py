@@ -13,6 +13,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 import requests
+import streamlit.components.v1 as components
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.ensemble import RandomForestRegressor
@@ -526,25 +527,27 @@ def match_team_to_nfl(team_value: str) -> Optional[dict]:
 
 
 def render_team_header_html(team_name: str, team_data: dict, subtitle: str = "") -> str:
-    """Generate a branded team header HTML block."""
+    """Generate a branded team header HTML block with ESPN team logo."""
     p = team_data["primary"]
     s = team_data["secondary"]
     a = team_data["accent"]
+    abbr = team_data["abbr"]
+    slug = ESPN_TEAM_SLUG.get(abbr, abbr.lower())
+    logo_url = f"https://a.espncdn.com/i/teamlogos/nfl/500/{slug}.png"
     return f'''
     <div style="background:linear-gradient(135deg, {p} 0%, {s} 100%);
                 border-radius:16px; padding:40px 40px 32px; margin-bottom:28px;
                 position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.1);">
-        <div style="position:absolute; top:-30px; right:20px; font-size:12rem; opacity:0.07;
-                    line-height:1; font-weight:900; color:white;">NFL</div>
-        <div style="position:absolute; bottom:-10px; right:40px; width:80px; height:80px;
-                    border-radius:50%; background:{a}; opacity:0.12;"></div>
-        <div style="position:absolute; top:20px; right:160px; width:40px; height:40px;
-                    border-radius:50%; background:{a}; opacity:0.08;"></div>
+        <div style="position:absolute; top:50%; right:30px; transform:translateY(-50%);
+                    width:140px; height:140px; opacity:0.15;
+                    background:url('{logo_url}') center/contain no-repeat;"></div>
+        <div style="position:absolute; bottom:-20px; left:50%; width:300px; height:300px;
+                    border-radius:50%; background:{a}; opacity:0.05; transform:translateX(-50%);"></div>
         <div style="position:relative; z-index:1;">
             <span style="display:inline-block; background:rgba(0,0,0,0.3); padding:4px 14px;
                          border-radius:20px; font-size:0.75rem; color:{a}; font-weight:600;
                          letter-spacing:0.1em; text-transform:uppercase; margin-bottom:12px;">
-                {team_data["abbr"]} &middot; NFL Offense
+                {abbr} &middot; NFL Offense
             </span>
             <h1 style="margin:8px 0 0; font-size:2.6rem; color:white; font-weight:800;
                        text-transform:uppercase; letter-spacing:0.02em; line-height:1.1;
@@ -556,122 +559,135 @@ def render_team_header_html(team_name: str, team_data: dict, subtitle: str = "")
 
 
 def render_formation_html(team_name: str, team_data: dict) -> str:
-    """Generate an NFL offensive formation visualization (11 personnel)."""
+    """Generate a full HTML page for NFL offensive formation (rendered via components.html)."""
     p = team_data["primary"]
     s = team_data["secondary"]
     a = team_data["accent"]
     r = team_data["roster"]
+    abbr = team_data["abbr"]
+    slug = ESPN_TEAM_SLUG.get(abbr, abbr.lower())
+    logo_url = f"https://a.espncdn.com/i/teamlogos/nfl/500/{slug}.png"
 
     players = [
-        # (top%, left%, pos_label, name)
-        (8,  12, "WR", r["WR1"]),
-        (8,  88, "WR", r["WR2"]),
-        (22, 68, "SLOT", r["WR3"]),
-        (33, 26, "TE", r["TE"]),
-        (56, 50, "QB", r["QB"]),
-        (75, 50, "RB", r["RB"]),
+        (8,  12, "WR", r["WR1"], False),
+        (8,  88, "WR", r["WR2"], False),
+        (22, 68, "SLOT", r["WR3"], False),
+        (33, 24, "TE", r["TE"], False),
+        (56, 50, "QB", r["QB"], True),
+        (75, 50, "RB", r["RB"], False),
     ]
 
-    player_html = ""
-    for top, left, pos, name in players:
-        is_qb = pos == "QB"
-        badge_bg = f"rgba(255,255,255,0.18)" if is_qb else "rgba(0,0,0,0.45)"
-        badge_border = f"2px solid {a}" if is_qb else "1px solid rgba(255,255,255,0.15)"
-        badge_shadow = f"0 0 25px {a}44" if is_qb else "none"
-        player_html += f'''
-        <div style="position:absolute; top:{top}%; left:{left}%;
-                    transform:translateX(-50%); text-align:center; z-index:2;">
-            <div style="background:{badge_bg}; backdrop-filter:blur(12px);
-                        -webkit-backdrop-filter:blur(12px);
-                        padding:10px 20px; border-radius:12px; border:{badge_border};
-                        min-width:120px; box-shadow:{badge_shadow};
-                        transition:transform 0.2s;">
-                <div style="color:rgba(255,255,255,0.5); font-size:0.6rem;
-                            text-transform:uppercase; letter-spacing:0.15em;
-                            margin-bottom:3px;">{pos}</div>
-                <div style="color:#fff; font-weight:700; font-size:0.9rem;
-                            text-transform:uppercase; letter-spacing:0.04em;
-                            white-space:nowrap;">{name}</div>
-            </div>
+    player_divs = ""
+    for top, left, pos, name, is_qb in players:
+        bg = "rgba(255,255,255,0.15)" if is_qb else "rgba(0,0,0,0.50)"
+        border = f"2px solid {a}" if is_qb else "1px solid rgba(255,255,255,0.2)"
+        shadow = f"0 0 30px {a}55" if is_qb else "0 4px 15px rgba(0,0,0,0.3)"
+        player_divs += f'''<div class="player" style="top:{top}%;left:{left}%;
+            background:{bg};border:{border};box-shadow:{shadow};">
+            <div class="pos">{pos}</div>
+            <div class="name">{name}</div>
         </div>'''
 
-    return f'''
-    <div style="position:relative; width:100%; max-width:680px; margin:0 auto;
-                background:linear-gradient(180deg, {p}ee 0%, {s}dd 60%, {p}cc 100%);
-                border-radius:20px; overflow:hidden; aspect-ratio:4/5;
-                border:1px solid rgba(255,255,255,0.1);
-                box-shadow:0 8px 40px rgba(0,0,0,0.4);">
-        <!-- Field markings -->
-        <div style="position:absolute;inset:0; pointer-events:none;">
-            <div style="position:absolute;top:15%;left:8%;right:8%;height:1px;
-                        background:rgba(255,255,255,0.08);"></div>
-            <div style="position:absolute;top:30%;left:8%;right:8%;height:1px;
-                        background:rgba(255,255,255,0.08);"></div>
-            <div style="position:absolute;top:45%;left:6%;right:6%;height:2px;
-                        background:rgba(255,255,255,0.18);"></div>
-            <div style="position:absolute;top:45%;left:6%;right:6%;text-align:center;">
-                <span style="background:{p}; padding:2px 16px; color:rgba(255,255,255,0.25);
-                             font-size:0.65rem; text-transform:uppercase; letter-spacing:0.2em;
-                             position:relative; top:-8px;">Line of Scrimmage</span>
-            </div>
-            <div style="position:absolute;top:60%;left:8%;right:8%;height:1px;
-                        background:rgba(255,255,255,0.08);"></div>
-            <div style="position:absolute;top:85%;left:8%;right:8%;height:1px;
-                        background:rgba(255,255,255,0.08);"></div>
-            <!-- Hash marks -->
-            <div style="position:absolute;top:0;bottom:0;left:38%;width:1px;
-                        background:rgba(255,255,255,0.04);"></div>
-            <div style="position:absolute;top:0;bottom:0;left:62%;width:1px;
-                        background:rgba(255,255,255,0.04);"></div>
-        </div>
+    ol_circles = ""
+    for pos in ["LT", "LG", "C", "RG", "RT"]:
+        sz = "34px" if pos == "C" else "28px"
+        bg = "rgba(255,255,255,0.15)" if pos == "C" else "rgba(255,255,255,0.08)"
+        bw = "2px" if pos == "C" else "1px"
+        ol_circles += f'''<div style="width:{sz};height:{sz};border-radius:50%;background:{bg};
+            border:{bw} solid rgba(255,255,255,0.25);display:flex;align-items:center;
+            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.5);
+            font-weight:600;">{pos}</div>'''
 
-        <!-- OL zone -->
-        <div style="position:absolute; top:42%; left:32%; right:32%; text-align:center; z-index:1;">
-            <div style="display:flex; justify-content:center; gap:6px;">
-                <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.12);
-                            border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;
-                            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.4);
-                            font-weight:600;">LT</div>
-                <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.12);
-                            border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;
-                            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.4);
-                            font-weight:600;">LG</div>
-                <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.18);
-                            border:1px solid rgba(255,255,255,0.3);display:flex;align-items:center;
-                            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.5);
-                            font-weight:700;">C</div>
-                <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.12);
-                            border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;
-                            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.4);
-                            font-weight:600;">RG</div>
-                <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.12);
-                            border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;
-                            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.4);
-                            font-weight:600;">RT</div>
-            </div>
-        </div>
-
-        {player_html}
-
-        <!-- Formation label -->
-        <div style="position:absolute; bottom:14px; left:16px; z-index:3;
-                    background:rgba(0,0,0,0.4); backdrop-filter:blur(8px);
-                    padding:6px 18px; border-radius:8px;
-                    border:1px solid rgba(255,255,255,0.1);">
-            <span style="color:{a}; font-weight:700; font-size:0.75rem;
-                         text-transform:uppercase; letter-spacing:0.1em;">
-                11 Personnel &middot; Spread
-            </span>
-        </div>
-        <div style="position:absolute; bottom:14px; right:16px; z-index:3;
-                    background:rgba(0,0,0,0.4); backdrop-filter:blur(8px);
-                    padding:6px 18px; border-radius:8px;
-                    border:1px solid rgba(255,255,255,0.1);">
-            <span style="color:rgba(255,255,255,0.5); font-weight:600; font-size:0.7rem;
-                         letter-spacing:0.08em;">OFFENSE 2024</span>
-        </div>
+    return f'''<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{background:transparent;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden;}}
+.field{{
+    position:relative;width:100%;height:620px;border-radius:20px;overflow:hidden;
+    background:
+        linear-gradient(180deg, {p}dd 0%, {s}bb 50%, {p}cc 100%),
+        repeating-linear-gradient(0deg,
+            rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px,
+            transparent 2px, transparent 62px),
+        linear-gradient(180deg, #1a5c2a 0%, #237a35 25%, #1a5c2a 50%, #237a35 75%, #1a5c2a 100%);
+    background-blend-mode: normal, overlay, normal;
+}}
+.endzone{{
+    position:absolute;left:0;right:0;height:7%;
+    display:flex;align-items:center;justify-content:center;
+}}
+.endzone-top{{top:0;background:{p}99;border-bottom:2px solid rgba(255,255,255,0.15);}}
+.endzone-bottom{{bottom:0;background:{s}66;border-top:1px solid rgba(255,255,255,0.08);}}
+.endzone-text{{
+    color:rgba(255,255,255,0.18);font-size:1.6rem;font-weight:900;
+    text-transform:uppercase;letter-spacing:0.4em;
+}}
+.logo-watermark{{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:220px;height:220px;opacity:0.07;
+    background:url('{logo_url}') center/contain no-repeat;
+    pointer-events:none;
+}}
+.yard-line{{position:absolute;left:6%;right:6%;height:1px;background:rgba(255,255,255,0.10);}}
+.los{{position:absolute;left:4%;right:4%;height:2px;top:44%;background:rgba(255,255,255,0.22);}}
+.los-label{{
+    position:absolute;top:44%;left:50%;transform:translate(-50%,-140%);
+    color:rgba(255,255,255,0.3);font-size:0.6rem;text-transform:uppercase;
+    letter-spacing:0.2em;background:{p}dd;padding:2px 14px;border-radius:4px;
+}}
+.hash{{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.04);}}
+.ol-zone{{
+    position:absolute;top:41%;left:30%;right:30%;
+    display:flex;justify-content:center;gap:6px;z-index:1;
+}}
+.player{{
+    position:absolute;transform:translateX(-50%);text-align:center;z-index:2;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    padding:10px 20px;border-radius:12px;min-width:120px;
+    transition:transform 0.25s ease, box-shadow 0.25s ease;cursor:default;
+}}
+.player:hover{{transform:translateX(-50%) scale(1.08);}}
+.player .pos{{
+    color:rgba(255,255,255,0.50);font-size:0.6rem;text-transform:uppercase;
+    letter-spacing:0.15em;margin-bottom:3px;
+}}
+.player .name{{
+    color:#fff;font-weight:700;font-size:0.9rem;text-transform:uppercase;
+    letter-spacing:0.04em;white-space:nowrap;
+}}
+.label-box{{
+    position:absolute;bottom:14px;z-index:3;
+    background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    padding:6px 18px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);
+}}
+</style></head><body>
+<div class="field">
+    <div class="endzone endzone-top"><span class="endzone-text">{abbr}</span></div>
+    <div class="endzone endzone-bottom"><span class="endzone-text" style="opacity:0.6;font-size:0.9rem;">{team_name}</span></div>
+    <div class="logo-watermark"></div>
+    <div class="yard-line" style="top:16%;"></div>
+    <div class="yard-line" style="top:28%;"></div>
+    <div class="los"></div>
+    <div class="los-label">Line of Scrimmage</div>
+    <div class="yard-line" style="top:58%;"></div>
+    <div class="yard-line" style="top:70%;"></div>
+    <div class="yard-line" style="top:86%;"></div>
+    <div class="hash" style="left:38%;"></div>
+    <div class="hash" style="left:62%;"></div>
+    <div class="ol-zone">{ol_circles}</div>
+    {player_divs}
+    <div class="label-box" style="left:16px;">
+        <span style="color:{a};font-weight:700;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;">
+            11 Personnel &middot; Spread</span>
     </div>
-    '''
+    <div class="label-box" style="right:16px;">
+        <span style="color:rgba(255,255,255,0.5);font-weight:600;font-size:0.7rem;letter-spacing:0.08em;">
+            OFFENSE 2024</span>
+    </div>
+</div>
+</body></html>'''
 
 
 @st.cache_data(show_spinner=False)
@@ -1051,7 +1067,7 @@ elif page == "Fiche equipe":
         col_form, col_roster = st.columns([3, 2])
 
         with col_form:
-            st.markdown(render_formation_html(team_sel, team_data), unsafe_allow_html=True)
+            components.html(render_formation_html(team_sel, team_data), height=640)
 
         with col_roster:
             roster = team_data["roster"]
