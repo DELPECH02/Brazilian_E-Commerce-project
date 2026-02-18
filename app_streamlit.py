@@ -368,6 +368,311 @@ ESPN_TEAM_SLUG = {
     "TEN": "ten", "WAS": "wsh"
 }
 
+# =========================================================
+# NFL TEAMS DATABASE — Colors & 2024 Offensive Starters
+# =========================================================
+NFL_TEAMS_DATA = {
+    "Arizona Cardinals": {
+        "abbr": "ARI", "primary": "#97233F", "secondary": "#000000", "accent": "#FFB612",
+        "roster": {"QB": "Kyler Murray", "RB": "James Conner", "WR1": "Marvin Harrison Jr.", "WR2": "Michael Wilson", "WR3": "Greg Dortch", "TE": "Trey McBride"},
+    },
+    "Atlanta Falcons": {
+        "abbr": "ATL", "primary": "#A71930", "secondary": "#000000", "accent": "#A5ACAF",
+        "roster": {"QB": "Kirk Cousins", "RB": "Bijan Robinson", "WR1": "Drake London", "WR2": "Darnell Mooney", "WR3": "Ray-Ray McCloud", "TE": "Kyle Pitts"},
+    },
+    "Baltimore Ravens": {
+        "abbr": "BAL", "primary": "#241773", "secondary": "#000000", "accent": "#9E7C0C",
+        "roster": {"QB": "Lamar Jackson", "RB": "Derrick Henry", "WR1": "Zay Flowers", "WR2": "Rashod Bateman", "WR3": "Nelson Agholor", "TE": "Mark Andrews"},
+    },
+    "Buffalo Bills": {
+        "abbr": "BUF", "primary": "#00338D", "secondary": "#C60C30", "accent": "#FFFFFF",
+        "roster": {"QB": "Josh Allen", "RB": "James Cook", "WR1": "Keon Coleman", "WR2": "Khalil Shakir", "WR3": "Curtis Samuel", "TE": "Dalton Kincaid"},
+    },
+    "Carolina Panthers": {
+        "abbr": "CAR", "primary": "#0085CA", "secondary": "#101820", "accent": "#BFC0BF",
+        "roster": {"QB": "Bryce Young", "RB": "Chuba Hubbard", "WR1": "Diontae Johnson", "WR2": "Adam Thielen", "WR3": "Jonathan Mingo", "TE": "Tommy Tremble"},
+    },
+    "Chicago Bears": {
+        "abbr": "CHI", "primary": "#0B162A", "secondary": "#C83200", "accent": "#FFFFFF",
+        "roster": {"QB": "Caleb Williams", "RB": "D'Andre Swift", "WR1": "DJ Moore", "WR2": "Keenan Allen", "WR3": "Rome Odunze", "TE": "Cole Kmet"},
+    },
+    "Cincinnati Bengals": {
+        "abbr": "CIN", "primary": "#FB4F14", "secondary": "#000000", "accent": "#FFFFFF",
+        "roster": {"QB": "Joe Burrow", "RB": "Zack Moss", "WR1": "Ja'Marr Chase", "WR2": "Tee Higgins", "WR3": "Andrei Iosivas", "TE": "Mike Gesicki"},
+    },
+    "Cleveland Browns": {
+        "abbr": "CLE", "primary": "#311D00", "secondary": "#FF3C00", "accent": "#FFFFFF",
+        "roster": {"QB": "Deshaun Watson", "RB": "Jerome Ford", "WR1": "Amari Cooper", "WR2": "Jerry Jeudy", "WR3": "Elijah Moore", "TE": "David Njoku"},
+    },
+    "Dallas Cowboys": {
+        "abbr": "DAL", "primary": "#003594", "secondary": "#041E42", "accent": "#869397",
+        "roster": {"QB": "Dak Prescott", "RB": "Rico Dowdle", "WR1": "CeeDee Lamb", "WR2": "Brandin Cooks", "WR3": "Jalen Tolbert", "TE": "Jake Ferguson"},
+    },
+    "Denver Broncos": {
+        "abbr": "DEN", "primary": "#002244", "secondary": "#FB4F14", "accent": "#FFFFFF",
+        "roster": {"QB": "Bo Nix", "RB": "Javonte Williams", "WR1": "Courtland Sutton", "WR2": "Josh Reynolds", "WR3": "Marvin Mims Jr.", "TE": "Adam Trautman"},
+    },
+    "Detroit Lions": {
+        "abbr": "DET", "primary": "#0076B6", "secondary": "#B0B7BC", "accent": "#000000",
+        "roster": {"QB": "Jared Goff", "RB": "Jahmyr Gibbs", "WR1": "Amon-Ra St. Brown", "WR2": "Jameson Williams", "WR3": "Kalif Raymond", "TE": "Sam LaPorta"},
+    },
+    "Green Bay Packers": {
+        "abbr": "GB", "primary": "#203731", "secondary": "#FFB612", "accent": "#FFFFFF",
+        "roster": {"QB": "Jordan Love", "RB": "Josh Jacobs", "WR1": "Jayden Reed", "WR2": "Romeo Doubs", "WR3": "Dontayvion Wicks", "TE": "Tucker Kraft"},
+    },
+    "Houston Texans": {
+        "abbr": "HOU", "primary": "#03202F", "secondary": "#A71930", "accent": "#FFFFFF",
+        "roster": {"QB": "C.J. Stroud", "RB": "Joe Mixon", "WR1": "Nico Collins", "WR2": "Stefon Diggs", "WR3": "Tank Dell", "TE": "Dalton Schultz"},
+    },
+    "Indianapolis Colts": {
+        "abbr": "IND", "primary": "#002C5F", "secondary": "#A2AAAD", "accent": "#FFFFFF",
+        "roster": {"QB": "Anthony Richardson", "RB": "Jonathan Taylor", "WR1": "Michael Pittman Jr.", "WR2": "Josh Downs", "WR3": "Alec Pierce", "TE": "Mo Alie-Cox"},
+    },
+    "Jacksonville Jaguars": {
+        "abbr": "JAX", "primary": "#006778", "secondary": "#101820", "accent": "#9F792C",
+        "roster": {"QB": "Trevor Lawrence", "RB": "Travis Etienne Jr.", "WR1": "Christian Kirk", "WR2": "Gabe Davis", "WR3": "Brian Thomas Jr.", "TE": "Evan Engram"},
+    },
+    "Kansas City Chiefs": {
+        "abbr": "KC", "primary": "#E31837", "secondary": "#FFB81C", "accent": "#FFFFFF",
+        "roster": {"QB": "Patrick Mahomes", "RB": "Isiah Pacheco", "WR1": "Rashee Rice", "WR2": "Xavier Worthy", "WR3": "Hollywood Brown", "TE": "Travis Kelce"},
+    },
+    "Las Vegas Raiders": {
+        "abbr": "LV", "primary": "#000000", "secondary": "#A5ACAF", "accent": "#FFFFFF",
+        "roster": {"QB": "Gardner Minshew", "RB": "Zamir White", "WR1": "Davante Adams", "WR2": "Jakobi Meyers", "WR3": "Tre Tucker", "TE": "Brock Bowers"},
+    },
+    "Los Angeles Chargers": {
+        "abbr": "LAC", "primary": "#0080C6", "secondary": "#FFC20E", "accent": "#FFFFFF",
+        "roster": {"QB": "Justin Herbert", "RB": "J.K. Dobbins", "WR1": "Quentin Johnston", "WR2": "Ladd McConkey", "WR3": "Joshua Palmer", "TE": "Will Dissly"},
+    },
+    "Los Angeles Rams": {
+        "abbr": "LAR", "primary": "#003594", "secondary": "#FFA300", "accent": "#FFFFFF",
+        "roster": {"QB": "Matthew Stafford", "RB": "Kyren Williams", "WR1": "Puka Nacua", "WR2": "Cooper Kupp", "WR3": "Demarcus Robinson", "TE": "Tyler Higbee"},
+    },
+    "Miami Dolphins": {
+        "abbr": "MIA", "primary": "#008E97", "secondary": "#FC4C02", "accent": "#FFFFFF",
+        "roster": {"QB": "Tua Tagovailoa", "RB": "De'Von Achane", "WR1": "Tyreek Hill", "WR2": "Jaylen Waddle", "WR3": "River Cracraft", "TE": "Jonnu Smith"},
+    },
+    "Minnesota Vikings": {
+        "abbr": "MIN", "primary": "#4F2683", "secondary": "#FFC62F", "accent": "#FFFFFF",
+        "roster": {"QB": "Sam Darnold", "RB": "Aaron Jones", "WR1": "Justin Jefferson", "WR2": "Jordan Addison", "WR3": "Jalen Nailor", "TE": "T.J. Hockenson"},
+    },
+    "New England Patriots": {
+        "abbr": "NE", "primary": "#002244", "secondary": "#C60C30", "accent": "#B0B7BC",
+        "roster": {"QB": "Jacoby Brissett", "RB": "Rhamondre Stevenson", "WR1": "DeMario Douglas", "WR2": "Ja'Lynn Polk", "WR3": "Kendrick Bourne", "TE": "Hunter Henry"},
+    },
+    "New Orleans Saints": {
+        "abbr": "NO", "primary": "#101820", "secondary": "#D3BC8D", "accent": "#FFFFFF",
+        "roster": {"QB": "Derek Carr", "RB": "Alvin Kamara", "WR1": "Chris Olave", "WR2": "Rashid Shaheed", "WR3": "A.T. Perry", "TE": "Juwan Johnson"},
+    },
+    "New York Giants": {
+        "abbr": "NYG", "primary": "#0B2265", "secondary": "#A71930", "accent": "#A5ACAF",
+        "roster": {"QB": "Daniel Jones", "RB": "Devin Singletary", "WR1": "Malik Nabers", "WR2": "Darius Slayton", "WR3": "Wan'Dale Robinson", "TE": "Darren Waller"},
+    },
+    "New York Jets": {
+        "abbr": "NYJ", "primary": "#125740", "secondary": "#000000", "accent": "#FFFFFF",
+        "roster": {"QB": "Aaron Rodgers", "RB": "Breece Hall", "WR1": "Garrett Wilson", "WR2": "Mike Williams", "WR3": "Allen Lazard", "TE": "Tyler Conklin"},
+    },
+    "Philadelphia Eagles": {
+        "abbr": "PHI", "primary": "#004C54", "secondary": "#A5ACAF", "accent": "#ACC0C6",
+        "roster": {"QB": "Jalen Hurts", "RB": "Saquon Barkley", "WR1": "A.J. Brown", "WR2": "DeVonta Smith", "WR3": "Jahan Dotson", "TE": "Dallas Goedert"},
+    },
+    "Pittsburgh Steelers": {
+        "abbr": "PIT", "primary": "#101820", "secondary": "#FFB612", "accent": "#C60C30",
+        "roster": {"QB": "Russell Wilson", "RB": "Najee Harris", "WR1": "George Pickens", "WR2": "Van Jefferson", "WR3": "Roman Wilson", "TE": "Pat Freiermuth"},
+    },
+    "San Francisco 49ers": {
+        "abbr": "SF", "primary": "#AA0000", "secondary": "#B3995D", "accent": "#FFFFFF",
+        "roster": {"QB": "Brock Purdy", "RB": "Christian McCaffrey", "WR1": "Deebo Samuel", "WR2": "Brandon Aiyuk", "WR3": "Jauan Jennings", "TE": "George Kittle"},
+    },
+    "Seattle Seahawks": {
+        "abbr": "SEA", "primary": "#002244", "secondary": "#69BE28", "accent": "#A5ACAF",
+        "roster": {"QB": "Geno Smith", "RB": "Kenneth Walker III", "WR1": "DK Metcalf", "WR2": "Tyler Lockett", "WR3": "Jaxon Smith-Njigba", "TE": "Noah Fant"},
+    },
+    "Tampa Bay Buccaneers": {
+        "abbr": "TB", "primary": "#D50A0A", "secondary": "#34302B", "accent": "#FF7900",
+        "roster": {"QB": "Baker Mayfield", "RB": "Rachaad White", "WR1": "Mike Evans", "WR2": "Chris Godwin", "WR3": "Sterling Shepard", "TE": "Cade Otton"},
+    },
+    "Tennessee Titans": {
+        "abbr": "TEN", "primary": "#0C2340", "secondary": "#4B92DB", "accent": "#C8102E",
+        "roster": {"QB": "Will Levis", "RB": "Tony Pollard", "WR1": "DeAndre Hopkins", "WR2": "Calvin Ridley", "WR3": "Tyler Boyd", "TE": "Chig Okonkwo"},
+    },
+    "Washington Commanders": {
+        "abbr": "WAS", "primary": "#5A1414", "secondary": "#FFB612", "accent": "#FFFFFF",
+        "roster": {"QB": "Jayden Daniels", "RB": "Brian Robinson Jr.", "WR1": "Terry McLaurin", "WR2": "Jahan Dotson", "WR3": "Luke McCaffrey", "TE": "Zach Ertz"},
+    },
+}
+
+# Reverse lookup: abbreviation -> full name
+_ABBR_TO_FULLNAME = {v["abbr"]: k for k, v in NFL_TEAMS_DATA.items()}
+
+
+def match_team_to_nfl(team_value: str) -> Optional[dict]:
+    """Match a CSV team value to its NFL_TEAMS_DATA entry."""
+    if not team_value:
+        return None
+    t = str(team_value).strip()
+    # Direct full-name match
+    if t in NFL_TEAMS_DATA:
+        return NFL_TEAMS_DATA[t]
+    # Abbreviation match
+    t_upper = t.upper()
+    if t_upper in _ABBR_TO_FULLNAME:
+        return NFL_TEAMS_DATA[_ABBR_TO_FULLNAME[t_upper]]
+    # Fuzzy: check if CSV value is contained in any team name
+    for name, data in NFL_TEAMS_DATA.items():
+        if t_upper in name.upper() or name.upper() in t_upper:
+            return data
+    return None
+
+
+def render_team_header_html(team_name: str, team_data: dict, subtitle: str = "") -> str:
+    """Generate a branded team header HTML block."""
+    p = team_data["primary"]
+    s = team_data["secondary"]
+    a = team_data["accent"]
+    return f'''
+    <div style="background:linear-gradient(135deg, {p} 0%, {s} 100%);
+                border-radius:16px; padding:40px 40px 32px; margin-bottom:28px;
+                position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.1);">
+        <div style="position:absolute; top:-30px; right:20px; font-size:12rem; opacity:0.07;
+                    line-height:1; font-weight:900; color:white;">NFL</div>
+        <div style="position:absolute; bottom:-10px; right:40px; width:80px; height:80px;
+                    border-radius:50%; background:{a}; opacity:0.12;"></div>
+        <div style="position:absolute; top:20px; right:160px; width:40px; height:40px;
+                    border-radius:50%; background:{a}; opacity:0.08;"></div>
+        <div style="position:relative; z-index:1;">
+            <span style="display:inline-block; background:rgba(0,0,0,0.3); padding:4px 14px;
+                         border-radius:20px; font-size:0.75rem; color:{a}; font-weight:600;
+                         letter-spacing:0.1em; text-transform:uppercase; margin-bottom:12px;">
+                {team_data["abbr"]} &middot; NFL Offense
+            </span>
+            <h1 style="margin:8px 0 0; font-size:2.6rem; color:white; font-weight:800;
+                       text-transform:uppercase; letter-spacing:0.02em; line-height:1.1;
+                       text-shadow:0 2px 20px rgba(0,0,0,0.3);">{team_name}</h1>
+            <p style="color:rgba(255,255,255,0.6); margin:6px 0 0; font-size:1rem;">{subtitle}</p>
+        </div>
+    </div>
+    '''
+
+
+def render_formation_html(team_name: str, team_data: dict) -> str:
+    """Generate an NFL offensive formation visualization (11 personnel)."""
+    p = team_data["primary"]
+    s = team_data["secondary"]
+    a = team_data["accent"]
+    r = team_data["roster"]
+
+    players = [
+        # (top%, left%, pos_label, name)
+        (8,  12, "WR", r["WR1"]),
+        (8,  88, "WR", r["WR2"]),
+        (22, 68, "SLOT", r["WR3"]),
+        (33, 26, "TE", r["TE"]),
+        (56, 50, "QB", r["QB"]),
+        (75, 50, "RB", r["RB"]),
+    ]
+
+    player_html = ""
+    for top, left, pos, name in players:
+        is_qb = pos == "QB"
+        badge_bg = f"rgba(255,255,255,0.18)" if is_qb else "rgba(0,0,0,0.45)"
+        badge_border = f"2px solid {a}" if is_qb else "1px solid rgba(255,255,255,0.15)"
+        badge_shadow = f"0 0 25px {a}44" if is_qb else "none"
+        player_html += f'''
+        <div style="position:absolute; top:{top}%; left:{left}%;
+                    transform:translateX(-50%); text-align:center; z-index:2;">
+            <div style="background:{badge_bg}; backdrop-filter:blur(12px);
+                        -webkit-backdrop-filter:blur(12px);
+                        padding:10px 20px; border-radius:12px; border:{badge_border};
+                        min-width:120px; box-shadow:{badge_shadow};
+                        transition:transform 0.2s;">
+                <div style="color:rgba(255,255,255,0.5); font-size:0.6rem;
+                            text-transform:uppercase; letter-spacing:0.15em;
+                            margin-bottom:3px;">{pos}</div>
+                <div style="color:#fff; font-weight:700; font-size:0.9rem;
+                            text-transform:uppercase; letter-spacing:0.04em;
+                            white-space:nowrap;">{name}</div>
+            </div>
+        </div>'''
+
+    return f'''
+    <div style="position:relative; width:100%; max-width:680px; margin:0 auto;
+                background:linear-gradient(180deg, {p}ee 0%, {s}dd 60%, {p}cc 100%);
+                border-radius:20px; overflow:hidden; aspect-ratio:4/5;
+                border:1px solid rgba(255,255,255,0.1);
+                box-shadow:0 8px 40px rgba(0,0,0,0.4);">
+        <!-- Field markings -->
+        <div style="position:absolute;inset:0; pointer-events:none;">
+            <div style="position:absolute;top:15%;left:8%;right:8%;height:1px;
+                        background:rgba(255,255,255,0.08);"></div>
+            <div style="position:absolute;top:30%;left:8%;right:8%;height:1px;
+                        background:rgba(255,255,255,0.08);"></div>
+            <div style="position:absolute;top:45%;left:6%;right:6%;height:2px;
+                        background:rgba(255,255,255,0.18);"></div>
+            <div style="position:absolute;top:45%;left:6%;right:6%;text-align:center;">
+                <span style="background:{p}; padding:2px 16px; color:rgba(255,255,255,0.25);
+                             font-size:0.65rem; text-transform:uppercase; letter-spacing:0.2em;
+                             position:relative; top:-8px;">Line of Scrimmage</span>
+            </div>
+            <div style="position:absolute;top:60%;left:8%;right:8%;height:1px;
+                        background:rgba(255,255,255,0.08);"></div>
+            <div style="position:absolute;top:85%;left:8%;right:8%;height:1px;
+                        background:rgba(255,255,255,0.08);"></div>
+            <!-- Hash marks -->
+            <div style="position:absolute;top:0;bottom:0;left:38%;width:1px;
+                        background:rgba(255,255,255,0.04);"></div>
+            <div style="position:absolute;top:0;bottom:0;left:62%;width:1px;
+                        background:rgba(255,255,255,0.04);"></div>
+        </div>
+
+        <!-- OL zone -->
+        <div style="position:absolute; top:42%; left:32%; right:32%; text-align:center; z-index:1;">
+            <div style="display:flex; justify-content:center; gap:6px;">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.12);
+                            border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;
+                            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.4);
+                            font-weight:600;">LT</div>
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.12);
+                            border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;
+                            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.4);
+                            font-weight:600;">LG</div>
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.18);
+                            border:1px solid rgba(255,255,255,0.3);display:flex;align-items:center;
+                            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.5);
+                            font-weight:700;">C</div>
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.12);
+                            border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;
+                            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.4);
+                            font-weight:600;">RG</div>
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.12);
+                            border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;
+                            justify-content:center;font-size:0.5rem;color:rgba(255,255,255,0.4);
+                            font-weight:600;">RT</div>
+            </div>
+        </div>
+
+        {player_html}
+
+        <!-- Formation label -->
+        <div style="position:absolute; bottom:14px; left:16px; z-index:3;
+                    background:rgba(0,0,0,0.4); backdrop-filter:blur(8px);
+                    padding:6px 18px; border-radius:8px;
+                    border:1px solid rgba(255,255,255,0.1);">
+            <span style="color:{a}; font-weight:700; font-size:0.75rem;
+                         text-transform:uppercase; letter-spacing:0.1em;">
+                11 Personnel &middot; Spread
+            </span>
+        </div>
+        <div style="position:absolute; bottom:14px; right:16px; z-index:3;
+                    background:rgba(0,0,0,0.4); backdrop-filter:blur(8px);
+                    padding:6px 18px; border-radius:8px;
+                    border:1px solid rgba(255,255,255,0.1);">
+            <span style="color:rgba(255,255,255,0.5); font-weight:600; font-size:0.7rem;
+                         letter-spacing:0.08em;">OFFENSE 2024</span>
+        </div>
+    </div>
+    '''
+
 
 @st.cache_data(show_spinner=False)
 def fetch_team_locations() -> pd.DataFrame:
@@ -676,13 +981,6 @@ elif page == "Donnees":
 # PAGE: FICHE EQUIPE
 # =========================================================
 elif page == "Fiche equipe":
-    st.markdown("""
-    <div class="title-bar">
-        <h1>🏟️ Fiche equipe</h1>
-        <p>Profil, tendances, classement et carte</p>
-    </div>
-    """, unsafe_allow_html=True)
-
     if not team_col:
         st.error("Colonne equipe non detectee dans le CSV.")
         st.stop()
@@ -690,6 +988,7 @@ elif page == "Fiche equipe":
     teams = sorted(df[team_col].dropna().unique().tolist())
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
 
+    # --- Team selector (clean row) ---
     colA, colB, colC = st.columns(3)
     team_sel = colA.selectbox("Equipe", teams)
     points_col = colB.selectbox(
@@ -701,6 +1000,23 @@ elif page == "Fiche equipe":
         index=(numeric_cols.index(yards_guess) if yards_guess in numeric_cols else min(1, len(numeric_cols) - 1)),
     )
 
+    # --- Resolve team data ---
+    team_data = match_team_to_nfl(team_sel)
+    _primary = team_data["primary"] if team_data else "#1a73e8"
+    _secondary = team_data["secondary"] if team_data else "#0d1b2a"
+
+    # --- Branded header ---
+    if team_data:
+        subtitle = "NFL Offense Analytics · 2005 — 2024"
+        st.markdown(render_team_header_html(team_sel, team_data, subtitle), unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="title-bar">
+            <h1>🏟️ {team_sel}</h1>
+            <p>Profil, tendances, classement et carte</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     view = df[df[team_col] == team_sel].copy()
 
     if year_col and year_col in df.columns:
@@ -708,12 +1024,19 @@ elif page == "Fiche equipe":
         year_min, year_max = st.select_slider("Periode", options=years, value=(years[0], years[-1]))
         view = view[(view[year_col] >= year_min) & (view[year_col] <= year_max)]
 
-    # Presentation
+    # --- KPI metrics with team-colored styling ---
     if year_col and year_col in view.columns and len(view) > 0:
         best_year = int(view.loc[view[points_col].idxmax(), year_col])
         best_points = float(view[points_col].max())
         mean_points = float(view[points_col].mean())
         mean_yards = float(view[yards_col].mean())
+
+        # Inject team-colored metric override
+        st.markdown(f"""
+        <style>
+        [data-testid="stMetric"] label {{ color: {_primary} !important; }}
+        </style>
+        """, unsafe_allow_html=True)
 
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Moy. Points", f"{mean_points:.1f}")
@@ -721,8 +1044,47 @@ elif page == "Fiche equipe":
         c3.metric("Meilleure saison", str(best_year))
         c4.metric("Record points", f"{best_points:.1f}")
 
-    # Trend charts
+    # --- FORMATION (compo offensive) ---
+    if team_data:
+        st.markdown("")
+        st.markdown("### Composition offensive 2024")
+        col_form, col_roster = st.columns([3, 2])
+
+        with col_form:
+            st.markdown(render_formation_html(team_sel, team_data), unsafe_allow_html=True)
+
+        with col_roster:
+            roster = team_data["roster"]
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg, {_primary}22 0%, {_secondary}22 100%);
+                        border:1px solid {_primary}44; border-radius:16px; padding:24px; height:100%;">
+                <h4 style="color:{_primary}; margin:0 0 16px; text-transform:uppercase;
+                           letter-spacing:0.08em; font-size:0.85rem;">Starters Offensifs</h4>
+            """, unsafe_allow_html=True)
+
+            for pos, name in roster.items():
+                pos_colors = {
+                    "QB": "#e31837", "RB": "#4285f4", "TE": "#fbbc04",
+                    "WR1": "#34a853", "WR2": "#34a853", "WR3": "#34a853",
+                }
+                pc = pos_colors.get(pos, "#8ab4f8")
+                display_pos = "WR" if pos.startswith("WR") else pos
+                st.markdown(f"""
+                <div style="display:flex; align-items:center; padding:10px 12px; margin-bottom:8px;
+                            background:rgba(255,255,255,0.04); border-radius:10px;
+                            border-left:3px solid {pc};">
+                    <span style="color:{pc}; font-weight:700; font-size:0.75rem; min-width:36px;
+                                text-transform:uppercase; letter-spacing:0.05em;">{display_pos}</span>
+                    <span style="color:#e8eaed; font-weight:600; font-size:0.95rem; margin-left:12px;">
+                        {name}</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- Trend charts ---
     if year_col and year_col in view.columns and len(view) > 1:
+        st.markdown("### Tendances historiques")
         col1, col2 = st.columns(2)
 
         with col1:
@@ -732,7 +1094,7 @@ elif page == "Fiche equipe":
                 markers=True,
             )
             fig.update_layout(**PLOTLY_LAYOUT)
-            fig.update_traces(line=dict(color="#4285f4", width=3), marker=dict(size=8))
+            fig.update_traces(line=dict(color=_primary, width=3), marker=dict(size=8))
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
@@ -742,10 +1104,10 @@ elif page == "Fiche equipe":
                 markers=True,
             )
             fig.update_layout(**PLOTLY_LAYOUT)
-            fig.update_traces(line=dict(color="#34a853", width=3), marker=dict(size=8))
+            fig.update_traces(line=dict(color=_secondary if _secondary != "#000000" else _primary, width=3), marker=dict(size=8))
             st.plotly_chart(fig, use_container_width=True)
 
-    # Ranking
+    # --- Ranking ---
     if year_col and year_col in df.columns:
         st.markdown("### Classement par saison")
         season_df = df.dropna(subset=[year_col]).copy()
@@ -761,30 +1123,34 @@ elif page == "Fiche equipe":
         fig.update_layout(**PLOTLY_LAYOUT, yaxis=dict(autorange="reversed"), coloraxis_showscale=False)
         st.plotly_chart(fig, use_container_width=True)
 
-    # Map
-    st.markdown("### Localisation")
-    loc = fetch_team_locations()
-    team_key = normalize_team_key(team_sel)
-    map_row = pd.DataFrame()
-    if not loc.empty:
-        sel_norm = team_sel.upper().strip()
-        map_row = loc[(loc["team_norm"] == sel_norm) | (loc.get("abbr") == team_key)]
-    if not map_row.empty:
-        st.map(map_row, zoom=5)
-    else:
-        st.warning("Coordonnees indisponibles.")
+    # --- Map + ESPN side-by-side ---
+    st.markdown("### Localisation & Depth Chart")
+    col_map, col_espn = st.columns(2)
 
-    # ESPN
-    st.markdown("### Depth Chart ESPN")
-    default_abbr = team_key if team_key in ESPN_TEAM_SLUG else ""
-    abbr = st.text_input("Abreviation ESPN (ex: DAL, NE, KC)", value=default_abbr)
-    if abbr.strip():
-        depth = fetch_espn_depth_chart(abbr.strip().upper())
-        if depth.empty:
-            st.info("Depth chart indisponible.")
+    with col_map:
+        loc = fetch_team_locations()
+        team_key = normalize_team_key(team_sel)
+        map_row = pd.DataFrame()
+        if not loc.empty:
+            sel_norm = team_sel.upper().strip()
+            map_row = loc[(loc["team_norm"] == sel_norm) | (loc.get("abbr") == team_key)]
+        if not map_row.empty:
+            st.map(map_row, zoom=5)
         else:
-            st.markdown(f"Formation estimee : {infer_offensive_formation_from_depth(depth)}")
-            st.dataframe(depth, use_container_width=True)
+            st.warning("Coordonnees indisponibles.")
+
+    with col_espn:
+        default_abbr = (team_data["abbr"] if team_data else "")
+        if default_abbr not in ESPN_TEAM_SLUG:
+            default_abbr = team_key if team_key in ESPN_TEAM_SLUG else ""
+        abbr = st.text_input("Abreviation ESPN (ex: DAL, NE, KC)", value=default_abbr)
+        if abbr.strip():
+            depth = fetch_espn_depth_chart(abbr.strip().upper())
+            if depth.empty:
+                st.info("Depth chart indisponible.")
+            else:
+                st.markdown(f"Formation estimee : {infer_offensive_formation_from_depth(depth)}")
+                st.dataframe(depth, use_container_width=True)
 
 
 # =========================================================
